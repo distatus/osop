@@ -1,0 +1,14 @@
+[Wingo]
+receiver = "Wingo"
+pollInterval = "1s"
+updateOnChange = true
+
+[Date]
+receiver = "Date"
+format = "02/01/2006 | 15:04:05"
+pollInterval = "1s"
+updateOnChange = true
+
+[Osop]
+delims = ["<", ">"]
+template = "<range .Wingo.Workspaces><if not .HasClients>{CF0xff252727<end>{<if .Active>S<.ActiveOn>{CB0xff5f875f <.Name> }}{S-<.ActiveOn><end> <.Name> }<if not .HasClients>}<end><end>| <.Wingo.ActiveName>{AR<.Date> }"
