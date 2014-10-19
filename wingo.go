@@ -29,6 +29,7 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"log"
 )
 
 func contains(args []string, arg string) bool {
@@ -81,7 +82,8 @@ type Wingo struct {
 func (w *Wingo) GetEvented() interface{} {
 	eventBytes, err := w.eventReader.ReadBytes(0)
 	if err != nil {
-		panic(err)
+		log.Printf("Error getting Wingo event: `%s`", err)
+		return *w
 	}
 	var event event
 	json.Unmarshal(eventBytes[:len(eventBytes)-1], &event)
@@ -109,26 +111,30 @@ func (w *Wingo) getWorkspace(name string) *workspace {
 	w.connection.Write([]byte(fmt.Sprintf("WorkspaceHead \"%s\"\x00", name)))
 	head, err := w.reader.ReadString(0)
 	if err != nil {
-		panic(err)
+		log.Printf("Error getting Wingo workspace head: `%s`, `%s`", name, err)
+	} else {
+		workspace.ActiveOn, err = strconv.ParseInt(head[:len(head)-1], 0, 0)
+		if err != nil {
+			log.Printf("Error getting Wingo workspace head: `%s`, `%s`", name, err)
+		} else {
+			workspace.Active = workspace.ActiveOn != -1
+		}
 	}
-	workspace.ActiveOn, err = strconv.ParseInt(head[:len(head)-1], 0, 0)
-	if err != nil {
-		panic(err)
-	}
-	workspace.Active = workspace.ActiveOn != -1
 
 	// TODO: This doesn't seem usable in current form
 	w.connection.Write([]byte(fmt.Sprintf("GetLayout \"%s\"\x00", name)))
 	layout, err := w.reader.ReadString(0)
 	if err != nil {
-		panic(err)
+		log.Printf("Error getting Wingo workspace layout: `%s`, `%s`", name, err)
+	} else {
+		workspace.Layout = layout[:len(layout)-1]
 	}
-	workspace.Layout = layout[:len(layout)-1]
 
 	w.connection.Write([]byte(fmt.Sprintf("GetClientList \"%s\"\x00", name)))
 	clients, err := w.reader.ReadString(0)
 	if err != nil {
-		panic(err)
+		log.Printf("Error getting Wingo workspace client list: `%s`, `%s`", name, err)
+		return workspace
 	}
 	for _, client := range strings.Split(clients[:len(clients)-1], "\n") {
 		if client == "" {
@@ -136,7 +142,8 @@ func (w *Wingo) getWorkspace(name string) *workspace {
 		}
 		clientId, err := strconv.Atoi(client)
 		if err != nil {
-			panic(err)
+			log.Printf("Wrong Wingo client Id: `%s`, `%s`, `%s`", name, client, err)
+			continue
 		}
 		w.addClient(clientId, workspace)
 	}
@@ -148,7 +155,8 @@ func (w *Wingo) getClientName(id int) string {
 	w.connection.Write([]byte(fmt.Sprintf("GetClientName %d\x00", id)))
 	activeName, err := w.reader.ReadString(0)
 	if err != nil {
-		panic(err)
+		log.Printf("Error getting Wingo client name: `%d`, `%s`", id, err)
+		return ""
 	}
 	return activeName[:len(activeName)-1]
 }
@@ -158,7 +166,8 @@ func (w *Wingo) addClient(id int, workspace *workspace) {
 		w.connection.Write([]byte(fmt.Sprintf("GetClientWorkspace %d\x00", id)))
 		workspaceName, err := w.reader.ReadString(0)
 		if err != nil {
-			panic(err)
+			log.Printf("Error getting Wingo client workspace: `%d`, `%s`", id, err)
+			return
 		}
 		workspace = w.workspaces[workspaceName[:len(workspaceName)-1]]
 	}
@@ -189,7 +198,8 @@ func (w *Wingo) updateWorkspaces() {
 	w.connection.Write([]byte("GetWorkspaceList\x00"))
 	workspacesString, err := w.reader.ReadString(0)
 	if err != nil {
-		panic(err)
+		log.Printf("Error getting Wingo workspace list: `%s`", err)
+		return
 	}
 
 	workspaces := strings.Split(workspacesString[:len(workspacesString)-1], "\n")
@@ -207,19 +217,19 @@ func NewWingo(config config) interface{} {
 	wingoCmd := exec.Command("wingo", "--show-socket")
 	socketBytes, err := wingoCmd.Output()
 	for err != nil {
-		fmt.Println("Problem getting wingo socket location, retrying:", err)
+		log.Println("Problem getting wingo socket location, retrying:", err)
 		wingoCmd := exec.Command("wingo", "--show-socket") // TODO: Refactor
 		socketBytes, err = wingoCmd.Output()
 	}
 	socket := string(socketBytes)[:len(socketBytes)-1]
 	conn, err := net.Dial("unix", socket)
 	for err != nil {
-		fmt.Println("Problem connecting to wingo socket, retrying:", err)
+		log.Println("Problem connecting to wingo socket, retrying:", err)
 		conn, err = net.Dial("unix", socket) // TODO: Refactor
 	}
 	evconn, err := net.Dial("unix", socket + "-notify")
 	for err != nil {
-		fmt.Println("Problem connecting to wingo-notify socket, retrying:", err)
+		log.Println("Problem connecting to wingo-notify socket, retrying:", err)
 		evconn, err = net.Dial("unix", socket + "-notify") // TODO: Same
 	}
 

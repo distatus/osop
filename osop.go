@@ -26,9 +26,17 @@ import (
 	"text/template"
 	"os"
 	"time"
+	"log"
 
 	"github.com/BurntSushi/toml"
 )
+
+func fatal(err error) {
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
 
 type config map[string]interface{}
 
@@ -98,11 +106,13 @@ func NewWorker(name string, config config) *Worker {
 	// TODO: Should be optional for EventedReceivers
 	interval, err := time.ParseDuration(config["pollInterval"].(string))
 	if err != nil {
-		panic(err)
+		log.Printf("Error parsing pollInterval (`%s`), default to 1s", err)
+		interval = time.Second
 	}
 	receiver, err := registry.GetReceiver(config["receiver"].(string))
 	if err != nil {
-		panic(err)
+		fmt.Printf("Error getting receiver (`%s`), not spawning worker", err)
+		return nil
 	}
 
 	return &Worker{
@@ -114,9 +124,14 @@ func NewWorker(name string, config config) *Worker {
 
 func main() {
 	var configs map[string]map[string]interface{}
-	if _, err := toml.DecodeFile("/home/kenji/osop/config.toml", &configs); err != nil {
-		panic(err)
-	}
+	_, err := toml.DecodeFile("/home/kenji/osop/config.toml", &configs)
+	fatal(err)
+
+	delims := configs["Osop"]["delims"].([]interface{})
+	t, err := template.New("t").Delims(delims[0].(string), delims[1].(string)).Parse(
+		configs["Osop"]["template"].(string) + "\n",
+	)
+	fatal(err)
 
 	ch := make(chan Change)
 
@@ -126,15 +141,9 @@ func main() {
 			continue
 		}
 		worker := NewWorker(receiver, config)
-		go worker.Do(ch)
-	}
-
-	delims := configs["Osop"]["delims"].([]interface{})
-	t, err := template.New("t").Delims(delims[0].(string), delims[1].(string)).Parse(
-		configs["Osop"]["template"].(string) + "\n",
-	)
-	if err != nil {
-		panic(err)
+		if worker != nil {
+			go worker.Do(ch)
+		}
 	}
 
 	for change := range ch {
