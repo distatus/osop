@@ -1,6 +1,5 @@
 [Wingo]
 receiver = "Wingo"
-pollInterval = "1s"
 updateOnChange = true
 
 [Date]

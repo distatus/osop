@@ -22,14 +22,14 @@
 package main
 
 import (
-	"fmt"
 	"bufio"
 	"encoding/json"
+	"fmt"
+	"log"
 	"net"
 	"os/exec"
 	"strconv"
 	"strings"
-	"log"
 )
 
 func contains(args []string, arg string) bool {
@@ -54,17 +54,17 @@ func del(workspaces []*workspace, name string) []*workspace {
 
 type event struct {
 	EventName string
-	Name string
-	Id int
+	Name      string
+	Id        int
 }
 
 type workspace struct {
-	Name string
-	Active bool
-	ActiveOn int64
-	Alerted bool
-	Layout string
-	Clients uint
+	Name       string
+	Active     bool
+	ActiveOn   int64
+	Alerted    bool
+	Layout     string
+	Clients    uint
 	HasClients bool
 }
 
@@ -72,10 +72,10 @@ type Wingo struct {
 	Workspaces []*workspace
 	ActiveName string
 
-	workspaces map[string]*workspace
-	clients map[int]*workspace // FIXME: This name is ambiguous
-	connection net.Conn
-	reader *bufio.Reader
+	workspaces  map[string]*workspace
+	clients     map[int]*workspace // FIXME: This name is ambiguous
+	connection  net.Conn
+	reader      *bufio.Reader
 	eventReader *bufio.Reader
 }
 
@@ -227,15 +227,15 @@ func NewWingo(config config) interface{} {
 		log.Println("Problem connecting to wingo socket, retrying:", err)
 		conn, err = net.Dial("unix", socket) // TODO: Refactor
 	}
-	evconn, err := net.Dial("unix", socket + "-notify")
+	evconn, err := net.Dial("unix", socket+"-notify")
 	for err != nil {
 		log.Println("Problem connecting to wingo-notify socket, retrying:", err)
-		evconn, err = net.Dial("unix", socket + "-notify") // TODO: Same
+		evconn, err = net.Dial("unix", socket+"-notify") // TODO: Same
 	}
 
 	wingo := &Wingo{
-		connection: conn,
-		reader: bufio.NewReader(conn),
+		connection:  conn,
+		reader:      bufio.NewReader(conn),
 		eventReader: bufio.NewReader(evconn),
 	}
 	wingo.clients = map[int]*workspace{}

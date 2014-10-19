@@ -23,10 +23,10 @@ package main
 
 import (
 	"fmt"
-	"text/template"
-	"os"
-	"time"
 	"log"
+	"os"
+	"text/template"
+	"time"
 
 	"github.com/BurntSushi/toml"
 )
@@ -36,7 +36,6 @@ func fatal(err error) {
 		log.Fatal(err)
 	}
 }
-
 
 type config map[string]interface{}
 
@@ -70,17 +69,16 @@ var registry = Registry{
 	receivers: make(map[string]interface{}),
 }
 
-
 type Change struct {
-	Name string
+	Name  string
 	Value interface{}
 }
 
 type Worker struct {
-	pollInterval time.Duration
+	pollInterval   time.Duration
 	updateOnChange bool
-	receiver interface{}
-	name string
+	receiver       interface{}
+	name           string
 }
 
 func (w *Worker) Do(ch chan Change) {
@@ -88,14 +86,14 @@ func (w *Worker) Do(ch chan Change) {
 	case EventedReceiver:
 		for {
 			ch <- Change{
-				Name: w.name,
+				Name:  w.name,
 				Value: r.GetEvented(),
 			}
 		}
 	case PollingReceiver:
 		for _ = range time.Tick(w.pollInterval) {
 			ch <- Change{
-				Name: w.name,
+				Name:  w.name,
 				Value: r.Get(),
 			}
 		}
@@ -103,11 +101,12 @@ func (w *Worker) Do(ch chan Change) {
 }
 
 func NewWorker(name string, config config) *Worker {
-	// TODO: Should be optional for EventedReceivers
-	interval, err := time.ParseDuration(config["pollInterval"].(string))
-	if err != nil {
-		log.Printf("Error parsing pollInterval (`%s`), default to 1s", err)
-		interval = time.Second
+	interval := time.Second
+	if config["pollInterval"] != nil {
+		interval_, err := time.ParseDuration(config["pollInterval"].(string))
+		if err == nil {
+			interval = interval_
+		}
 	}
 	receiver, err := registry.GetReceiver(config["receiver"].(string))
 	if err != nil {
@@ -117,8 +116,8 @@ func NewWorker(name string, config config) *Worker {
 
 	return &Worker{
 		pollInterval: interval,
-		receiver: receiver(config),
-		name: name,
+		receiver:     receiver(config),
+		name:         name,
 	}
 }
 
