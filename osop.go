@@ -22,6 +22,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -122,8 +123,11 @@ func NewWorker(name string, config config) *Worker {
 }
 
 func main() {
+	configFilename := flag.String("c", "", "Path to the configuration file")
+	flag.Parse()
+
 	var configs map[string]map[string]interface{}
-	_, err := toml.DecodeFile("/home/kenji/osop/config.toml", &configs)
+	_, err := toml.DecodeFile(*configFilename, &configs)
 	fatal(err)
 
 	delims := configs["Osop"]["delims"].([]interface{})

@@ -4,9 +4,9 @@ updateOnChange = true
 
 [Date]
 receiver = "Date"
-format = "02/01/2006 | 15:04:05"
 pollInterval = "1s"
 updateOnChange = true
+format = "02/01/2006 | 15:04:05"
 
 [Osop]
 delims = ["<", ">"]
