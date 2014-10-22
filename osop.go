@@ -27,6 +27,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"sync"
 	"text/template"
 	"time"
 
@@ -151,21 +152,35 @@ func main() {
 	)
 	fatal(err)
 
-	ch := make(chan Change)
+	workers := make(chan *Worker)
+	var wg sync.WaitGroup
 
-	data := make(map[string]interface{})
-	for receiver, config := range configs {
+	for receiver, conf := range configs {
 		if receiver == "Osop" {
 			continue
 		}
-		worker := NewWorker(receiver, config)
-		if worker != nil {
-			go worker.Do(ch)
-		}
+		wg.Add(1)
+		go func(ch chan *Worker, receiver string, conf config) {
+			defer wg.Done()
+			ch <- NewWorker(receiver, conf)
+		}(workers, receiver, conf)
 	}
+	go func() {
+		wg.Wait()
+		close(workers)
+	}()
 
-	for change := range ch {
-		data[change.Name] = change.Value
-		t.Execute(os.Stdout, data)
+	changes := make(chan Change)
+	data := make(map[string]interface{})
+	for {
+		select {
+		case worker := <-workers:
+			if worker != nil {
+				go worker.Do(changes)
+			}
+		case change := <-changes:
+			data[change.Name] = change.Value
+			t.Execute(os.Stdout, data)
+		}
 	}
 }
