@@ -106,6 +106,10 @@ func (w *Wingo) GetEvented() interface{} {
 	return *w
 }
 
+func (w *Wingo) Get() interface {} {
+	return *w
+}
+
 func (w *Wingo) getWorkspace(name string) *workspace {
 	workspace := &workspace{Name: name}
 	w.connection.Write([]byte(fmt.Sprintf("WorkspaceHead \"%s\"\x00", name)))

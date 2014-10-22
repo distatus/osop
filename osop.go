@@ -45,6 +45,7 @@ type PollingReceiver interface {
 }
 
 type EventedReceiver interface {
+	PollingReceiver
 	GetEvented() interface{}
 }
 
@@ -85,6 +86,12 @@ type Worker struct {
 func (w *Worker) Do(ch chan Change) {
 	switch r := w.receiver.(type) {
 	case EventedReceiver:
+		// Get first value in "normal" manner,
+		// so user won't have to wait for an event to occur.
+		ch <- Change{
+			Name:  w.name,
+			Value: r.Get(),
+		}
 		for {
 			ch <- Change{
 				Name:  w.name,
@@ -111,7 +118,7 @@ func NewWorker(name string, config config) *Worker {
 	}
 	receiver, err := registry.GetReceiver(config["receiver"].(string))
 	if err != nil {
-		fmt.Printf("Error getting receiver (`%s`), not spawning worker", err)
+		fmt.Printf("Error getting receiver (`%s`), not spawning worker\n", err)
 		return nil
 	}
 
