@@ -22,6 +22,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/fhs/gompd/mpd"
@@ -75,20 +76,20 @@ func (m *Mpd) getStatus(client *mpd.Client) map[string]string {
 	return status
 }
 
-func NewMpd(config config) interface{} {
+func NewMpd(config config) (interface{}, error) {
 	address := config["address"].(string)
 	password := config["password"].(string)
 
 	watcher, err := mpd.NewWatcher("tcp", address, password, "player")
 	if err != nil {
-		return nil
+		return nil, fmt.Errorf("Cannot connect to MPD: `%s`", err)
 	}
 
 	return &Mpd{
 		address:  address,
 		password: password,
 		watcher:  watcher,
-	}
+	}, nil
 }
 
 func init() {

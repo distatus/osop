@@ -50,7 +50,7 @@ type EventedReceiver interface {
 	GetEvented() interface{}
 }
 
-type receiverCtor func(config) interface{}
+type receiverCtor func(config) (interface{}, error)
 
 type Registry struct {
 	receivers map[string]interface{}
@@ -119,13 +119,20 @@ func NewWorker(name string, config config) *Worker {
 	}
 	receiver, err := registry.GetReceiver(config["receiver"].(string))
 	if err != nil {
-		fmt.Printf("Error getting receiver (`%s`), not spawning worker\n", err)
+		log.Printf("Error getting receiver (`%s`), not spawning worker\n", err)
 		return nil
+	}
+
+	receiverInstance, err := receiver(config)
+	for err != nil {
+		log.Println(err)
+		time.Sleep(time.Second)
+		receiverInstance, err = receiver(config)
 	}
 
 	return &Worker{
 		pollInterval: interval,
-		receiver:     receiver(config),
+		receiver:     receiverInstance,
 		name:         name,
 	}
 }

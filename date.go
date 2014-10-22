@@ -33,8 +33,8 @@ func (d *Date) Get() interface{} {
 	return time.Now().Format(d.format)
 }
 
-func NewDate(config config) interface{} {
-	return &Date{format: config["format"].(string)}
+func NewDate(config config) (interface{}, error) {
+	return &Date{format: config["format"].(string)}, nil
 }
 
 func init() {

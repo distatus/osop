@@ -220,24 +220,20 @@ func (w *Wingo) updateWorkspaces() {
 	}
 }
 
-func NewWingo(config config) interface{} {
+func NewWingo(config config) (interface{}, error) {
 	wingoCmd := exec.Command("wingo", "--show-socket")
 	socketBytes, err := wingoCmd.Output()
-	for err != nil {
-		log.Println("Problem getting wingo socket location, retrying:", err)
-		wingoCmd := exec.Command("wingo", "--show-socket") // TODO: Refactor
-		socketBytes, err = wingoCmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("Cannot get wingo socket location: `%s`", err)
 	}
 	socket := string(socketBytes)[:len(socketBytes)-1]
 	conn, err := net.Dial("unix", socket)
-	for err != nil {
-		log.Println("Problem connecting to wingo socket, retrying:", err)
-		conn, err = net.Dial("unix", socket) // TODO: Refactor
+	if err != nil {
+		return nil, fmt.Errorf("Cannot connect to wingo socket: `%s`", err)
 	}
 	evconn, err := net.Dial("unix", socket+"-notify")
-	for err != nil {
-		log.Println("Problem connecting to wingo-notify socket, retrying:", err)
-		evconn, err = net.Dial("unix", socket+"-notify") // TODO: Same
+	if err != nil {
+		return nil, fmt.Errorf("Cannot connect to wingo-notify socket: `%s`", err)
 	}
 
 	wingo := &Wingo{
@@ -247,7 +243,7 @@ func NewWingo(config config) interface{} {
 	}
 	wingo.clients = map[int]*workspace{}
 	wingo.updateWorkspaces()
-	return wingo
+	return wingo, nil
 }
 
 func init() {
