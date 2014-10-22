@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"text/template"
 	"time"
 
@@ -56,11 +57,11 @@ type Registry struct {
 }
 
 func (r *Registry) AddReceiver(name string, fun receiverCtor) {
-	r.receivers[name] = fun
+	r.receivers[strings.ToLower(name)] = fun
 }
 
 func (r *Registry) GetReceiver(name string) (receiverCtor, error) {
-	v := r.receivers[name]
+	v := r.receivers[strings.ToLower(name)]
 	if v == nil {
 		return nil, fmt.Errorf("Receiver `%s` not found", name)
 	}
