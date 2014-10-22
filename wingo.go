@@ -94,12 +94,15 @@ func (w *Wingo) GetEvented() interface{} {
 		w.Workspaces = append(w.Workspaces, w.getWorkspace(event.Name))
 	case "RemovedWorkspace":
 		w.Workspaces = del(w.Workspaces, event.Name)
-	case "ChangedActiveClient":
+	case "ChangedActiveClient", "ChangedClientName":
 		// FIXME: Active name should be per head, shouldn't it?
 		w.ActiveName = w.getClientName(event.Id)
 	case "MappedClient", "ManagedClient":
 		w.addClient(event.Id, nil)
-	case "UnmappedClient", "UnmanagedClient":
+	case "UnmappedClient":
+		w.removeClient(event.Id)
+		w.addClient(event.Id, nil)
+	case "UnmanagedClient":
 		w.removeClient(event.Id)
 	}
 
