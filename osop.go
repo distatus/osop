@@ -101,6 +101,10 @@ func (w *Worker) Do(ch chan Change) {
 			}
 		}
 	case PollingReceiver:
+		ch <- Change{
+			Name:  w.name,
+			Value: r.Get(),
+		}
 		for _ = range time.Tick(w.pollInterval) {
 			ch <- Change{
 				Name:  w.name,
