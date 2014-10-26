@@ -34,19 +34,19 @@ type Mpd struct {
 	watcher  *mpd.Watcher
 }
 
-func (m *Mpd) GetEvented() interface{} {
+func (m *Mpd) GetEvented() (interface{}, error) {
 	<-m.watcher.Event
 
 	return m.Get()
 }
 
-func (m *Mpd) Get() interface{} {
+func (m *Mpd) Get() (interface{}, error) {
 	// FIXME: This should go to constructor,
 	// but there's a bug in gompd that connections created before
 	// <-watcher fail with EOF afterwards.
 	client, err := mpd.DialAuthenticated("tcp", m.address, m.password)
 	if err != nil {
-		panic(err)
+		return nil, fmt.Errorf("Connection error: `%s`", err)
 	}
 
 	return struct {
@@ -55,7 +55,7 @@ func (m *Mpd) Get() interface{} {
 	}{
 		m.getCurrentSong(client),
 		m.getStatus(client),
-	}
+	}, nil
 }
 
 func (m *Mpd) getCurrentSong(client *mpd.Client) map[string]string {

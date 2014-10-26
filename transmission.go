@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -105,19 +104,17 @@ type transmissionResponseShort struct {
 	Current            transmissionResponseStatsShort `json:"current-stats"`
 }
 
-func (t *Transmission) Get() interface{} {
+func (t *Transmission) Get() (interface{}, error) {
 	req, err := http.NewRequest(
 		"POST", t.url, bytes.NewBufferString(`{"method":"session-stats"}`),
 	)
 	if err != nil {
-		log.Printf("Error creating Transmission request: `%s`", err)
-		return nil
+		return nil, fmt.Errorf("Cannot create request: `%s`", err)
 	}
 	req.Header.Add("X-Transmission-Session-Id", t.sessionId)
 	resp, err := t.client.Do(req)
 	if err != nil {
-		log.Printf("Error sending Transmission request: `%s`", err)
-		return nil
+		return nil, fmt.Errorf("Cannot send request: `%s`", err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode == 409 {
@@ -125,7 +122,7 @@ func (t *Transmission) Get() interface{} {
 		return t.Get()
 	}
 	if resp.StatusCode != 200 {
-		return nil
+		return nil, fmt.Errorf("Wrong status code: `%d`", resp.StatusCode)
 	}
 
 	decoder := json.NewDecoder(resp.Body)
@@ -135,13 +132,13 @@ func (t *Transmission) Get() interface{} {
 			Arguments transmissionResponseShort
 		}
 		decoder.Decode(&data)
-		return data.Arguments
+		return data.Arguments, nil
 	} else {
 		var data struct {
 			Arguments transmissionResponse
 		}
 		decoder.Decode(&data)
-		return data.Arguments
+		return data.Arguments, nil
 	}
 }
 

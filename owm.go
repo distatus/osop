@@ -58,11 +58,10 @@ type owmResponse struct {
 	}
 }
 
-func (o *Owm) Get() interface{} {
+func (o *Owm) Get() (interface{}, error) {
 	resp, err := http.Get(o.url)
 	if err != nil {
-		log.Printf("Error getting Owm response: `%s`", err)
-		return nil
+		return nil, fmt.Errorf("Cannot get response: `%s`", err)
 	}
 	defer resp.Body.Close()
 
@@ -103,7 +102,7 @@ func (o *Owm) Get() interface{} {
 		Humidity: decoded.Main.Humidity,
 		Wind:     decoded.Wind,
 		Coord:    decoded.Coord,
-	}
+	}, nil
 }
 
 func NewOwm(config config) (interface{}, error) {

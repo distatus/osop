@@ -79,11 +79,10 @@ type Wingo struct {
 	eventReader *bufio.Reader
 }
 
-func (w *Wingo) GetEvented() interface{} {
+func (w *Wingo) GetEvented() (interface{}, error) {
 	eventBytes, err := w.eventReader.ReadBytes(0)
 	if err != nil {
-		log.Printf("Error getting Wingo event: `%s`", err)
-		return *w
+		return nil, fmt.Errorf("Cannot get event: `%s`", err)
 	}
 	var event event
 	json.Unmarshal(eventBytes[:len(eventBytes)-1], &event)
@@ -104,13 +103,15 @@ func (w *Wingo) GetEvented() interface{} {
 		w.addClient(event.Id, nil)
 	case "UnmanagedClient":
 		w.removeClient(event.Id)
+	default:
+		return nil, nil
 	}
 
-	return *w
+	return *w, nil
 }
 
-func (w *Wingo) Get() interface {} {
-	return *w
+func (w *Wingo) Get() (interface {}, error) {
+	return *w, nil
 }
 
 func (w *Wingo) getWorkspace(name string) *workspace {

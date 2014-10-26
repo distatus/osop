@@ -29,8 +29,8 @@ type Date struct {
 	format string
 }
 
-func (d *Date) Get() interface{} {
-	return time.Now().Format(d.format)
+func (d *Date) Get() (interface{}, error) {
+	return time.Now().Format(d.format), nil
 }
 
 func NewDate(config config) (interface{}, error) {

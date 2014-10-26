@@ -43,12 +43,12 @@ func fatal(err error) {
 type config map[string]interface{}
 
 type PollingReceiver interface {
-	Get() interface{}
+	Get() (interface{}, error)
 }
 
 type EventedReceiver interface {
 	PollingReceiver
-	GetEvented() interface{}
+	GetEvented() (interface{}, error)
 }
 
 type receiverCtor func(config) (interface{}, error)
@@ -86,30 +86,37 @@ type Worker struct {
 }
 
 func (w *Worker) Do(ch chan Change) {
+	doChange := func(r PollingReceiver, ch chan Change) {
+		value, err := r.Get()
+		if err != nil {
+			log.Printf("%s: %s\n", w.name, err)
+		}
+		ch <- Change {
+			Name:  w.name,
+			Value: value,
+		}
+	}
+
 	switch r := w.receiver.(type) {
 	case EventedReceiver:
 		// Get first value in "normal" manner,
 		// so user won't have to wait for an event to occur.
-		ch <- Change{
-			Name:  w.name,
-			Value: r.Get(),
-		}
+		doChange(r, ch)
 		for {
+			value, err := r.GetEvented()
+			if err != nil {
+				log.Printf("%s: %s\n", w.name, err)
+				continue
+			}
 			ch <- Change{
 				Name:  w.name,
-				Value: r.GetEvented(),
+				Value: value,
 			}
 		}
 	case PollingReceiver:
-		ch <- Change{
-			Name:  w.name,
-			Value: r.Get(),
-		}
+		doChange(r, ch)
 		for _ = range time.Tick(w.pollInterval) {
-			ch <- Change{
-				Name:  w.name,
-				Value: r.Get(),
-			}
+			doChange(r, ch)
 		}
 	}
 }
@@ -117,9 +124,9 @@ func (w *Worker) Do(ch chan Change) {
 func NewWorker(name string, config config) *Worker {
 	interval := time.Second
 	if config["pollInterval"] != nil {
-		interval_, err := time.ParseDuration(config["pollInterval"].(string))
+		_interval, err := time.ParseDuration(config["pollInterval"].(string))
 		if err == nil {
-			interval = interval_
+			interval = _interval
 		}
 	}
 	receiver, err := registry.GetReceiver(config["receiver"].(string))
