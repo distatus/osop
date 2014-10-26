@@ -36,7 +36,7 @@ type Owm struct {
 	url string
 }
 
-type response struct {
+type owmResponse struct {
 	City     string
 	Country  string
 	Sunrise  uint64
@@ -91,7 +91,7 @@ func (o *Owm) Get() interface{} {
 	}
 	json.NewDecoder(resp.Body).Decode(&decoded)
 
-	return response{
+	return owmResponse{
 		City:     decoded.Name,
 		Country:  decoded.Sys.Country,
 		Sunrise:  decoded.Sys.Sunrise,

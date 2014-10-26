@@ -169,10 +169,6 @@ func main() {
 			ch <- NewWorker(receiver, conf)
 		}(workers, receiver, conf)
 	}
-	go func() {
-		wg.Wait()
-		close(workers)
-	}()
 
 	changes := make(chan Change)
 	data := make(map[string]interface{})
