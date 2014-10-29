@@ -11,7 +11,7 @@ import (
 	"github.com/pyk/byten"
 )
 
-func bytonize(data []byte, speed bool, short bool) (string, error) {
+func bytonizeByte(data []byte, speed bool, short bool) (string, error) {
 	i, err := strconv.ParseInt(string(data), 0, 0)
 	if err != nil {
 		return "", err
@@ -32,7 +32,7 @@ func bytonize(data []byte, speed bool, short bool) (string, error) {
 type stringByten string
 
 func (s *stringByten) UnmarshalJSON(data []byte) error {
-	b, err := bytonize(data, false, false)
+	b, err := bytonizeByte(data, false, false)
 	*s = stringByten(b)
 	return err
 }
@@ -40,7 +40,7 @@ func (s *stringByten) UnmarshalJSON(data []byte) error {
 type stringBytenShort string
 
 func (s *stringBytenShort) UnmarshalJSON(data []byte) error {
-	b, err := bytonize(data, false, true)
+	b, err := bytonizeByte(data, false, true)
 	*s = stringBytenShort(b)
 	return err
 }
@@ -48,7 +48,7 @@ func (s *stringBytenShort) UnmarshalJSON(data []byte) error {
 type stringBytenSpeed string
 
 func (s *stringBytenSpeed) UnmarshalJSON(data []byte) error {
-	b, err := bytonize(data, true, false)
+	b, err := bytonizeByte(data, true, false)
 	*s = stringBytenSpeed(b)
 	return err
 }
@@ -56,7 +56,7 @@ func (s *stringBytenSpeed) UnmarshalJSON(data []byte) error {
 type stringBytenSpeedShort string
 
 func (s *stringBytenSpeedShort) UnmarshalJSON(data []byte) error {
-	b, err := bytonize(data, true, true)
+	b, err := bytonizeByte(data, true, true)
 	*s = stringBytenSpeedShort(b)
 	return err
 }
