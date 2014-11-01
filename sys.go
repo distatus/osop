@@ -171,7 +171,7 @@ func (s *Sys) getNetworkByName(
 
 func NewSys(config config) (interface{}, error) {
 	if config["metrics"] == nil {
-		return nil, fmt.Errorf("")
+		return nil, fmt.Errorf("Metrics parameter is required for Sys receiver")
 	}
 	metrics := config["metrics"].([]interface{})
 	s := &Sys{
@@ -185,6 +185,10 @@ func NewSys(config config) (interface{}, error) {
 
 	interval, _ := time.ParseDuration(config["pollInterval"].(string))
 	s.interval = interval.Seconds()
+
+	if config["shorts"] != nil {
+		s.shorts = config["shorts"].(bool)
+	}
 
 	return s, nil
 }
