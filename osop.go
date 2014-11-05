@@ -91,9 +91,11 @@ func (w *Worker) Do(ch chan Change) {
 		if err != nil {
 			log.Printf("%s: %s\n", w.name, err)
 		}
-		ch <- Change {
-			Name:  w.name,
-			Value: value,
+		if value != nil {
+			ch <- Change {
+				Name:  w.name,
+				Value: value,
+			}
 		}
 	}
 
@@ -108,9 +110,11 @@ func (w *Worker) Do(ch chan Change) {
 				log.Printf("%s: %s\n", w.name, err)
 				continue
 			}
-			ch <- Change{
-				Name:  w.name,
-				Value: value,
+			if value != nil {
+				ch <- Change{
+					Name:  w.name,
+					Value: value,
+				}
 			}
 		}
 	case PollingReceiver:
@@ -187,7 +191,10 @@ func main() {
 			}
 		case change := <-changes:
 			data[change.Name] = change.Value
-			t.Execute(os.Stdout, data)
+			err := t.Execute(os.Stdout, data)
+			if err != nil {
+				fmt.Println()
+			}
 		}
 	}
 }
