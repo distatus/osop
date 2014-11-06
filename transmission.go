@@ -169,5 +169,5 @@ func NewTransmission(config config) (interface{}, error) {
 }
 
 func init() {
-	registry.AddReceiver("Transmission", NewTransmission)
+	registry.AddReceiver("Transmission", NewTransmission, transmissionResponse{})
 }

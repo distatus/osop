@@ -194,5 +194,5 @@ func NewSys(config config) (interface{}, error) {
 }
 
 func init() {
-	registry.AddReceiver("Sys", NewSys)
+	registry.AddReceiver("Sys", NewSys, sysResponse{})
 }

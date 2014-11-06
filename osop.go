@@ -55,10 +55,13 @@ type receiverCtor func(config) (interface{}, error)
 
 type Registry struct {
 	receivers map[string]interface{}
+	zeros     map[string]interface{}
 }
 
-func (r *Registry) AddReceiver(name string, fun receiverCtor) {
-	r.receivers[strings.ToLower(name)] = fun
+func (r *Registry) AddReceiver(name string, fun receiverCtor, zero interface{}) {
+	name = strings.ToLower(name)
+	r.receivers[name] = fun
+	r.zeros[name] = zero
 }
 
 func (r *Registry) GetReceiver(name string) (receiverCtor, error) {
@@ -69,8 +72,17 @@ func (r *Registry) GetReceiver(name string) (receiverCtor, error) {
 	return v.(receiverCtor), nil
 }
 
+func (r *Registry) GetZero(name string) (interface{}, error) {
+	v, ok := r.zeros[strings.ToLower(name)]
+	if !ok {
+		return nil, fmt.Errorf("Receiver `%s` zero value not found", name)
+	}
+	return v, nil
+}
+
 var registry = Registry{
 	receivers: make(map[string]interface{}),
+	zeros:     make(map[string]interface{}),
 }
 
 type Change struct {
@@ -92,7 +104,7 @@ func (w *Worker) Do(ch chan Change) {
 			log.Printf("%s: %s\n", w.name, err)
 		}
 		if value != nil {
-			ch <- Change {
+			ch <- Change{
 				Name:  w.name,
 				Value: value,
 			}
@@ -133,11 +145,7 @@ func NewWorker(name string, config config) *Worker {
 			interval = _interval
 		}
 	}
-	receiver, err := registry.GetReceiver(config["receiver"].(string))
-	if err != nil {
-		log.Printf("Error getting receiver (`%s`), not spawning worker\n", err)
-		return nil
-	}
+	receiver, _ := registry.GetReceiver(config["receiver"].(string))
 
 	receiverInstance, err := receiver(config)
 	for err != nil {
@@ -162,7 +170,15 @@ func main() {
 	fatal(err)
 
 	delims := configs["Osop"]["delims"].([]interface{})
-	t, err := template.New("t").Delims(delims[0].(string), delims[1].(string)).Parse(
+	t, err := template.New("t").Delims(
+		delims[0].(string), delims[1].(string),
+	).Funcs(template.FuncMap{"stringify": func(arg interface{}) string {
+		s, ok := arg.(string)
+		if !ok {
+			return ""
+		}
+		return s
+	}}).Parse(
 		configs["Osop"]["template"].(string) + "\n",
 	)
 	fatal(err)
@@ -170,19 +186,26 @@ func main() {
 	workers := make(chan *Worker)
 	var wg sync.WaitGroup
 
-	for receiver, conf := range configs {
-		if receiver == "Osop" {
+	data := make(map[string]interface{})
+
+	for name, conf := range configs {
+		if name == "Osop" {
 			continue
 		}
+		zero, err := registry.GetZero(conf["receiver"].(string))
+		if err != nil {
+			log.Printf("Error getting receiver (`%s`), not spawning worker\n", err)
+			continue
+		}
+		data[name] = zero
 		wg.Add(1)
-		go func(ch chan *Worker, receiver string, conf config) {
+		go func(ch chan *Worker, name string, conf config) {
 			defer wg.Done()
-			ch <- NewWorker(receiver, conf)
-		}(workers, receiver, conf)
+			ch <- NewWorker(name, conf)
+		}(workers, name, conf)
 	}
 
 	changes := make(chan Change)
-	data := make(map[string]interface{})
 	for {
 		select {
 		case worker := <-workers:

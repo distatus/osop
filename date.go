@@ -38,5 +38,5 @@ func NewDate(config config) (interface{}, error) {
 }
 
 func init() {
-	registry.AddReceiver("Date", NewDate)
+	registry.AddReceiver("Date", NewDate, "")
 }

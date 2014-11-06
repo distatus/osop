@@ -110,7 +110,7 @@ func (w *Wingo) GetEvented() (interface{}, error) {
 	return *w, nil
 }
 
-func (w *Wingo) Get() (interface {}, error) {
+func (w *Wingo) Get() (interface{}, error) {
 	return *w, nil
 }
 
@@ -248,5 +248,5 @@ func NewWingo(config config) (interface{}, error) {
 }
 
 func init() {
-	registry.AddReceiver("Wingo", NewWingo)
+	registry.AddReceiver("Wingo", NewWingo, Wingo{})
 }

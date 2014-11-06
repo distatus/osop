@@ -34,6 +34,11 @@ type Mpd struct {
 	watcher  *mpd.Watcher
 }
 
+type mpdResponse struct {
+	Song   map[string]string
+	Status map[string]string
+}
+
 func (m *Mpd) GetEvented() (interface{}, error) {
 	<-m.watcher.Event
 
@@ -49,12 +54,9 @@ func (m *Mpd) Get() (interface{}, error) {
 		return nil, fmt.Errorf("Connection error: `%s`", err)
 	}
 
-	return struct {
-		Song   map[string]string
-		Status map[string]string
-	}{
-		m.getCurrentSong(client),
-		m.getStatus(client),
+	return mpdResponse{
+		Song:   m.getCurrentSong(client),
+		Status: m.getStatus(client),
 	}, nil
 }
 
@@ -93,5 +95,5 @@ func NewMpd(config config) (interface{}, error) {
 }
 
 func init() {
-	registry.AddReceiver("Mpd", NewMpd)
+	registry.AddReceiver("Mpd", NewMpd, mpdResponse{})
 }

@@ -145,5 +145,5 @@ func NewOwm(config config) (interface{}, error) {
 }
 
 func init() {
-	registry.AddReceiver("Owm", NewOwm)
+	registry.AddReceiver("Owm", NewOwm, owmResponse{})
 }
