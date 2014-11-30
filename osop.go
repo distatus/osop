@@ -27,7 +27,6 @@ import (
 	"log"
 	"os"
 	"strings"
-	"sync"
 	"text/template"
 	"time"
 
@@ -184,7 +183,6 @@ func main() {
 	fatal(err)
 
 	workers := make(chan *Worker)
-	var wg sync.WaitGroup
 
 	data := make(map[string]interface{})
 
@@ -198,9 +196,7 @@ func main() {
 			continue
 		}
 		data[name] = zero
-		wg.Add(1)
 		go func(ch chan *Worker, name string, conf config) {
-			defer wg.Done()
 			ch <- NewWorker(name, conf)
 		}(workers, name, conf)
 	}
