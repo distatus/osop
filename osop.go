@@ -22,10 +22,10 @@
 package main
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
 	"log"
-	"os"
 	"strings"
 	"text/template"
 	"time"
@@ -91,7 +91,6 @@ type Change struct {
 
 type Worker struct {
 	pollInterval   time.Duration
-	updateOnChange bool
 	receiver       interface{}
 	name           string
 }
@@ -202,6 +201,7 @@ func main() {
 	}
 
 	changes := make(chan Change)
+	var cache string
 	for {
 		select {
 		case worker := <-workers:
@@ -210,10 +210,19 @@ func main() {
 			}
 		case change := <-changes:
 			data[change.Name] = change.Value
-			err := t.Execute(os.Stdout, data)
+			var buf bytes.Buffer
+			err := t.Execute(&buf, data)
 			if err != nil {
-				fmt.Println()
+				buf.WriteByte('\n')
 			}
+
+			str := buf.String()
+			if str == cache {
+				continue
+			}
+			cache = str
+
+			fmt.Print(cache)
 		}
 	}
 }
