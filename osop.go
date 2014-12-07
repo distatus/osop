@@ -26,11 +26,14 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"os"
+	"path"
 	"strings"
 	"text/template"
 	"time"
 
 	"github.com/BurntSushi/toml"
+	"github.com/adrg/xdg"
 )
 
 func fatal(err error) {
@@ -164,10 +167,37 @@ func main() {
 	flag.Parse()
 
 	var configs map[string]map[string]interface{}
-	_, err := toml.DecodeFile(*configFilename, &configs)
-	fatal(err)
+	if _, err := toml.DecodeFile(*configFilename, &configs); err != nil {
+		if _, ok := err.(*os.PathError); !ok {
+			fatal(err)
+		}
+		if *configFilename == "" {
+			*configFilename = "config.toml"
+		}
+		xdgFile, err := xdg.ConfigFile(path.Join("osop", *configFilename))
+		fatal(err)
+		if _, err := os.Stat(xdgFile); os.IsNotExist(err) {
+			f, err := os.Create(xdgFile)
+			fatal(err)
+			f.WriteString(strings.TrimSpace(`
+[Now]
+receiver="date"
+pollInterval="1s"
+format="02/01/2006 15:04:05"
 
-	delims := configs["Osop"]["delims"].([]interface{})
+[Osop]
+template="<.Now>"
+			`))
+			f.Close()
+		}
+		_, err = toml.DecodeFile(xdgFile, &configs)
+		fatal(err)
+	}
+
+	delims, ok := configs["Osop"]["delims"].([]interface{})
+	if !ok {
+		delims = []interface{}{"<", ">"}
+	}
 	t, err := template.New("t").Delims(
 		delims[0].(string), delims[1].(string),
 	).Funcs(template.FuncMap{"stringify": func(arg interface{}) string {
