@@ -93,9 +93,9 @@ type Change struct {
 }
 
 type Worker struct {
-	pollInterval   time.Duration
-	receiver       interface{}
-	name           string
+	pollInterval time.Duration
+	receiver     interface{}
+	name         string
 }
 
 func (w *Worker) Do(ch chan Change) {

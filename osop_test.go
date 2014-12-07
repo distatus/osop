@@ -27,25 +27,49 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var RegistryAddReceiverTests = []struct {
+var RegistryTests = []struct {
 	input    string
 	expected string
+	zero     string
 }{
-	{"test", "test"},
-	{"Test", "test"},
-	{"TEST", "test"},
+	{"test", "test", "z1"},
+	{"Test", "test", "z2"},
+	{"TEST", "test", "z3"},
 }
 
 func TestRegistry(t *testing.T) {
-	inputFun := func(c config) interface{} { return "" }
-	for _, tt := range RegistryAddReceiverTests {
-		expected := map[string]interface{}{tt.expected: inputFun}
+	for _, tt := range RegistryTests {
+		inputFun := func(c config) (interface{}, error) { return tt.input, nil }
 
-		registry := Registry{receivers: make(map[string]interface{})}
-		registry.AddReceiver(tt.input, inputFun)
-
-		for k, v := range expected {
-			assert.Equal(t, registry.receivers[k], v)
+		registry := Registry{
+			receivers: make(map[string]interface{}),
+			zeros:     make(map[string]interface{}),
 		}
+		registry.AddReceiver(tt.input, inputFun, tt.zero)
+
+		assert.Equal(t, 1, len(registry.receivers))
+		assert.Equal(t, 1, len(registry.zeros))
+		result, rerr := registry.receivers[tt.expected].(receiverCtor)(map[string]interface{}{})
+		assert.Equal(t, tt.input, result)
+		assert.Nil(t, rerr)
+		assert.Equal(t, tt.zero, registry.zeros[tt.expected])
+
+		for _, ttt := range RegistryTests {
+			receiver, err := registry.GetReceiver(ttt.expected)
+			assert.Nil(t, err)
+			result, rerr := receiver(map[string]interface{}{})
+			assert.Equal(t, tt.input, result)
+			assert.Nil(t, rerr)
+			zero, err := registry.GetZero(ttt.expected)
+			assert.Equal(t, tt.zero, zero)
+			assert.Nil(t, err)
+		}
+
+		receiver, err := registry.GetReceiver("tset")
+		assert.Nil(t, receiver)
+		assert.Equal(t, "Receiver `tset` not found", err.Error())
+		zero, err := registry.GetZero("tset")
+		assert.Nil(t, zero)
+		assert.Equal(t, "Receiver `tset` zero value not found", err.Error())
 	}
 }
