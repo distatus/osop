@@ -55,6 +55,12 @@ type EventedReceiver interface {
 
 type receiverCtor func(config) (interface{}, error)
 
+type IRegistry interface {
+	AddReceiver(string, receiverCtor, interface{})
+	GetReceiver(string) (receiverCtor, error)
+	GetZero(string) (interface{}, error)
+}
+
 type Registry struct {
 	receivers map[string]interface{}
 	zeros     map[string]interface{}
@@ -82,7 +88,7 @@ func (r *Registry) GetZero(name string) (interface{}, error) {
 	return v, nil
 }
 
-var registry = Registry{
+var registry IRegistry = &Registry{
 	receivers: make(map[string]interface{}),
 	zeros:     make(map[string]interface{}),
 }
@@ -96,44 +102,42 @@ type Worker struct {
 	pollInterval time.Duration
 	receiver     interface{}
 	name         string
+	once         bool
+}
+
+func (w *Worker) doChange(get func() (interface{}, error), ch chan Change) {
+	value, err := get()
+	if err != nil {
+		log.Printf("%s: %s\n", w.name, err)
+		return
+	}
+	if value != nil {
+		ch <- Change{
+			Name:  w.name,
+			Value: value,
+		}
+	}
 }
 
 func (w *Worker) Do(ch chan Change) {
-	doChange := func(r PollingReceiver, ch chan Change) {
-		value, err := r.Get()
-		if err != nil {
-			log.Printf("%s: %s\n", w.name, err)
-		}
-		if value != nil {
-			ch <- Change{
-				Name:  w.name,
-				Value: value,
-			}
-		}
-	}
-
 	switch r := w.receiver.(type) {
 	case EventedReceiver:
 		// Get first value in "normal" manner,
 		// so user won't have to wait for an event to occur.
-		doChange(r, ch)
+		w.doChange(r.Get, ch)
 		for {
-			value, err := r.GetEvented()
-			if err != nil {
-				log.Printf("%s: %s\n", w.name, err)
-				continue
-			}
-			if value != nil {
-				ch <- Change{
-					Name:  w.name,
-					Value: value,
-				}
+			w.doChange(r.GetEvented, ch)
+			if w.once {
+				break
 			}
 		}
 	case PollingReceiver:
-		doChange(r, ch)
+		w.doChange(r.Get, ch)
 		for _ = range time.Tick(w.pollInterval) {
-			doChange(r, ch)
+			w.doChange(r.Get, ch)
+			if w.once {
+				break
+			}
 		}
 	}
 }
