@@ -36,42 +36,68 @@ import (
 	"github.com/adrg/xdg"
 )
 
+// fatal is a helper function to call when something terribly wrong
+// may have happened. Logs given error and terminates application.
 func fatal(err error) {
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
+// config defines configuration structure.
 type config map[string]interface{}
 
+// PollingReceiver defines a basic type of receiver, which
+// will run every config:`pollInterval` and try to get new data ASAP.
 type PollingReceiver interface {
 	Get() (interface{}, error)
 }
 
+// EventedReceiver defines an advanced receiver, which
+// is able to wait for a change to happen and only then report
+// a new value.
+//
+// Note that it does not need to implement a fully functional Get() method.
+// It is only used at the beginning, so user do not have to wait
+// for an event to happen to get the initial value.
 type EventedReceiver interface {
 	PollingReceiver
 	GetEvented() (interface{}, error)
 }
 
+// receiverCtor defines receiver constructor type.
 type receiverCtor func(config) (interface{}, error)
 
+// IRegistry defines interface for receivers registry.
+//
+// Default registry is provided as a globally accessible `registry`
+// variable. All receivers shall add themselves there before they
+// could be used (tip: init() function is a good way to do so).
 type IRegistry interface {
 	AddReceiver(string, receiverCtor, interface{})
 	GetReceiver(string) (receiverCtor, error)
 	GetZero(string) (interface{}, error)
 }
 
+// Registry is a default IRegistry implementation.
 type Registry struct {
 	receivers map[string]interface{}
 	zeros     map[string]interface{}
 }
 
+// AddReceiver adds new receiver to registry.
+//
+// `zero` should be an initial (probably empty), expected response.
+// It's to workaround text/template panicking on non-existing structure elements.
 func (r *Registry) AddReceiver(name string, fun receiverCtor, zero interface{}) {
 	name = strings.ToLower(name)
 	r.receivers[name] = fun
 	r.zeros[name] = zero
 }
 
+// GetReceiver gets existing receiver from registry.
+//
+// Note that receiver names are case insensitive.
 func (r *Registry) GetReceiver(name string) (receiverCtor, error) {
 	v := r.receivers[strings.ToLower(name)]
 	if v == nil {
@@ -80,6 +106,9 @@ func (r *Registry) GetReceiver(name string) (receiverCtor, error) {
 	return v.(receiverCtor), nil
 }
 
+// GetZero gets zero response for an existing receiver.
+//
+// Note that receiver names are case insensitive.
 func (r *Registry) GetZero(name string) (interface{}, error) {
 	v, ok := r.zeros[strings.ToLower(name)]
 	if !ok {
@@ -88,16 +117,22 @@ func (r *Registry) GetZero(name string) (interface{}, error) {
 	return v, nil
 }
 
+// registry is a default, globally available Registry instance.
 var registry IRegistry = &Registry{
 	receivers: make(map[string]interface{}),
 	zeros:     make(map[string]interface{}),
 }
 
+// Change is emitted for every receiver value change.
 type Change struct {
 	Name  string
 	Value interface{}
 }
 
+// Worker processes receiver value changes.
+//
+// Responsible for getting the value from receiver and propagating it
+// further to the template compilation method.
 type Worker struct {
 	pollInterval time.Duration
 	receiver     interface{}
@@ -105,6 +140,7 @@ type Worker struct {
 	once         bool
 }
 
+// doChange handles a single value change.
 func (w *Worker) doChange(get func() (interface{}, error), ch chan Change) {
 	value, err := get()
 	if err != nil {
@@ -119,6 +155,10 @@ func (w *Worker) doChange(get func() (interface{}, error), ch chan Change) {
 	}
 }
 
+// Do acts as a Worker event loop.
+//
+// For PollingReceivers, spawns every config:`pollInterval`.
+// For EventedReceivers, blocks until an event is generated.
 func (w *Worker) Do(ch chan Change) {
 	switch r := w.receiver.(type) {
 	case EventedReceiver:
@@ -142,6 +182,7 @@ func (w *Worker) Do(ch chan Change) {
 	}
 }
 
+// NewWorker constructs new Worker instance with given name and config.
 func NewWorker(name string, config config) *Worker {
 	interval := time.Second
 	if config["pollInterval"] != nil {
