@@ -163,13 +163,13 @@ func (t *Transmission) Get() (interface{}, error) {
 	}
 }
 
-func NewTransmission(config config) (interface{}, error) {
+func (t *Transmission) Init(config config) error {
 	if config["address"] == nil {
-		return nil, fmt.Errorf("Address parameter is required for Owm receiver")
+		return fmt.Errorf("Address parameter is required for Owm receiver")
 	}
 	_url, err := url.Parse(config["address"].(string))
 	if err != nil {
-		return nil, fmt.Errorf("Cannot parse Transmission address: `%s`", err)
+		return fmt.Errorf("Cannot parse Transmission address: `%s`", err)
 	}
 	if config["path"] != nil {
 		_url.Path = config["path"].(string)
@@ -177,18 +177,16 @@ func NewTransmission(config config) (interface{}, error) {
 		_url.Path = "transmission/rpc"
 	}
 
-	t := &Transmission{
-		url:    _url.String(),
-		client: &http.Client{},
-	}
+	t.url = _url.String()
+	t.client = &http.Client{}
 
 	if config["shorts"] != nil {
 		t.shorts = config["shorts"].(bool)
 	}
 
-	return t, nil
+	return nil
 }
 
 func init() {
-	registry.AddReceiver("Transmission", NewTransmission, transmissionResponse{})
+	registry.AddReceiver("Transmission", &Transmission{}, transmissionResponse{})
 }

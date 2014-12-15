@@ -61,24 +61,23 @@ func (b *Bspwm) Get() (interface{}, error) {
 	return res, nil
 }
 
-func NewBspwm(config config) (interface{}, error) {
+func (b *Bspwm) Init(config config) error {
 	socket, err := filepath.Glob("/tmp/bspwm*")
 	if err != nil || len(socket) < 1 {
-		return nil, fmt.Errorf("Cannot find socket file")
+		return fmt.Errorf("Cannot find socket file")
 	}
 	conn, err := net.Dial("unix", socket[0])
 	if err != nil {
-		return nil, fmt.Errorf("Cannot connect to socket: `%s`", err)
+		return fmt.Errorf("Cannot connect to socket: `%s`", err)
 	}
 
 	conn.Write([]byte("control\x00--subscribe\x00"))
 
-	return &Bspwm{
-		connection: conn,
-		reader:     bufio.NewReader(conn),
-	}, nil
+	b.connection = conn
+	b.reader = bufio.NewReader(conn)
+	return nil
 }
 
 func init() {
-	registry.AddReceiver("bspwm", NewBspwm, bspwmResponse{})
+	registry.AddReceiver("bspwm", &Bspwm{}, bspwmResponse{})
 }

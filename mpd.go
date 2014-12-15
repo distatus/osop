@@ -78,22 +78,21 @@ func (m *Mpd) getStatus(client *mpd.Client) map[string]string {
 	return status
 }
 
-func NewMpd(config config) (interface{}, error) {
+func (m *Mpd) Init(config config) error {
 	address := config["address"].(string)
 	password := config["password"].(string)
 
 	watcher, err := mpd.NewWatcher("tcp", address, password, "player")
 	if err != nil {
-		return nil, fmt.Errorf("Cannot connect to MPD: `%s`", err)
+		return fmt.Errorf("Cannot connect to MPD: `%s`", err)
 	}
 
-	return &Mpd{
-		address:  address,
-		password: password,
-		watcher:  watcher,
-	}, nil
+	m.address = address
+	m.password = password
+	m.watcher = watcher
+	return nil
 }
 
 func init() {
-	registry.AddReceiver("Mpd", NewMpd, mpdResponse{})
+	registry.AddReceiver("Mpd", &Mpd{}, mpdResponse{})
 }

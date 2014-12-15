@@ -169,16 +169,16 @@ func (s *Sys) getNetworkByName(
 	return net
 }
 
-func NewSys(config config) (interface{}, error) {
+func (s *Sys) Init(config config) error {
 	if config["metrics"] == nil {
-		return nil, fmt.Errorf("Metrics parameter is required for Sys receiver")
+		return fmt.Errorf("Metrics parameter is required for Sys receiver")
 	}
 	metrics := config["metrics"].([]interface{})
-	s := &Sys{
-		metrics:    make([]string, len(metrics)),
-		downloaded: make(map[string]uint64),
-		uploaded:   make(map[string]uint64),
-	}
+
+	s.metrics = make([]string, len(metrics))
+	s.downloaded = make(map[string]uint64)
+	s.uploaded = make(map[string]uint64)
+
 	for i, metric := range metrics {
 		s.metrics[i] = metric.(string)
 	}
@@ -190,9 +190,9 @@ func NewSys(config config) (interface{}, error) {
 		s.shorts = config["shorts"].(bool)
 	}
 
-	return s, nil
+	return nil
 }
 
 func init() {
-	registry.AddReceiver("Sys", NewSys, sysResponse{})
+	registry.AddReceiver("Sys", &Sys{}, sysResponse{})
 }

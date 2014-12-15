@@ -28,6 +28,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"reflect"
 	"strings"
 	"text/template"
 	"time"
@@ -50,6 +51,7 @@ type config map[string]interface{}
 // PollingReceiver defines a basic type of receiver, which
 // will run every config:`pollInterval` and try to get new data ASAP.
 type PollingReceiver interface {
+	Init(config config) error
 	Get() (interface{}, error)
 }
 
@@ -65,23 +67,20 @@ type EventedReceiver interface {
 	GetEvented() (interface{}, error)
 }
 
-// receiverCtor defines receiver constructor type.
-type receiverCtor func(config) (interface{}, error)
-
 // IRegistry defines interface for receivers registry.
 //
 // Default registry is provided as a globally accessible `registry`
 // variable. All receivers shall add themselves there before they
 // could be used (tip: init() function is a good way to do so).
 type IRegistry interface {
-	AddReceiver(string, receiverCtor, interface{})
-	GetReceiver(string) (receiverCtor, error)
+	AddReceiver(string, PollingReceiver, interface{})
+	GetReceiver(string) (PollingReceiver, error)
 	GetZero(string) (interface{}, error)
 }
 
 // Registry is a default IRegistry implementation.
 type Registry struct {
-	receivers map[string]interface{}
+	receivers map[string]reflect.Type
 	zeros     map[string]interface{}
 }
 
@@ -89,21 +88,23 @@ type Registry struct {
 //
 // `zero` should be an initial (probably empty), expected response.
 // It's to workaround text/template panicking on non-existing structure elements.
-func (r *Registry) AddReceiver(name string, fun receiverCtor, zero interface{}) {
+func (r *Registry) AddReceiver(name string, rec PollingReceiver, zero interface{}) {
 	name = strings.ToLower(name)
-	r.receivers[name] = fun
+	r.receivers[name] = reflect.TypeOf(rec).Elem()
 	r.zeros[name] = zero
 }
 
 // GetReceiver gets existing receiver from registry.
+// New instance is created on every call to allow multiple
+// instances of the same receiver to co-exist.
 //
 // Note that receiver names are case insensitive.
-func (r *Registry) GetReceiver(name string) (receiverCtor, error) {
+func (r *Registry) GetReceiver(name string) (PollingReceiver, error) {
 	v := r.receivers[strings.ToLower(name)]
 	if v == nil {
 		return nil, fmt.Errorf("Receiver `%s` not found", name)
 	}
-	return v.(receiverCtor), nil
+	return reflect.New(v).Interface().(PollingReceiver), nil
 }
 
 // GetZero gets zero response for an existing receiver.
@@ -119,7 +120,7 @@ func (r *Registry) GetZero(name string) (interface{}, error) {
 
 // registry is a default, globally available Registry instance.
 var registry IRegistry = &Registry{
-	receivers: make(map[string]interface{}),
+	receivers: make(map[string]reflect.Type),
 	zeros:     make(map[string]interface{}),
 }
 
@@ -135,7 +136,7 @@ type Change struct {
 // further to the template compilation method.
 type Worker struct {
 	pollInterval time.Duration
-	receiver     interface{}
+	receiver     PollingReceiver
 	name         string
 	once         bool
 }
@@ -193,16 +194,16 @@ func NewWorker(name string, config config) *Worker {
 	}
 	receiver, _ := registry.GetReceiver(config["receiver"].(string))
 
-	receiverInstance, err := receiver(config)
+	err := receiver.Init(config)
 	for err != nil {
 		log.Println(err)
 		time.Sleep(time.Second)
-		receiverInstance, err = receiver(config)
+		err = receiver.Init(config)
 	}
 
 	return &Worker{
 		pollInterval: interval,
-		receiver:     receiverInstance,
+		receiver:     receiver,
 		name:         name,
 	}
 }

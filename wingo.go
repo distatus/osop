@@ -221,32 +221,30 @@ func (w *Wingo) updateWorkspaces() {
 	}
 }
 
-func NewWingo(config config) (interface{}, error) {
+func (w *Wingo) Init(config config) error {
 	wingoCmd := exec.Command("wingo", "--show-socket")
 	socketBytes, err := wingoCmd.Output()
 	if err != nil {
-		return nil, fmt.Errorf("Cannot get wingo socket location: `%s`", err)
+		return fmt.Errorf("Cannot get wingo socket location: `%s`", err)
 	}
 	socket := string(socketBytes)[:len(socketBytes)-1]
 	conn, err := net.Dial("unix", socket)
 	if err != nil {
-		return nil, fmt.Errorf("Cannot connect to wingo socket: `%s`", err)
+		return fmt.Errorf("Cannot connect to wingo socket: `%s`", err)
 	}
 	evconn, err := net.Dial("unix", socket+"-notify")
 	if err != nil {
-		return nil, fmt.Errorf("Cannot connect to wingo-notify socket: `%s`", err)
+		return fmt.Errorf("Cannot connect to wingo-notify socket: `%s`", err)
 	}
 
-	wingo := &Wingo{
-		connection:  conn,
-		reader:      bufio.NewReader(conn),
-		eventReader: bufio.NewReader(evconn),
-	}
-	wingo.clients = map[int]*workspace{}
-	wingo.updateWorkspaces()
-	return wingo, nil
+	w.connection = conn
+	w.reader = bufio.NewReader(conn)
+	w.eventReader = bufio.NewReader(evconn)
+	w.clients = map[int]*workspace{}
+	w.updateWorkspaces()
+	return nil
 }
 
 func init() {
-	registry.AddReceiver("Wingo", NewWingo, Wingo{})
+	registry.AddReceiver("Wingo", &Wingo{}, Wingo{})
 }

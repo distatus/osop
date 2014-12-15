@@ -105,13 +105,13 @@ func (o *Owm) Get() (interface{}, error) {
 	}, nil
 }
 
-func NewOwm(config config) (interface{}, error) {
+func (o *Owm) Init(config config) error {
 	if config["location"] == nil {
-		return nil, fmt.Errorf("Location parameter is required for Owm receiver")
+		return fmt.Errorf("Location parameter is required for Owm receiver")
 	}
 	_url, err := url.Parse(URL)
 	if err != nil {
-		return nil, fmt.Errorf("Cannot parse Owm URL: `%s`", err)
+		return fmt.Errorf("Cannot parse Owm URL: `%s`", err)
 	}
 	location := config["location"].(string)
 	_, err = strconv.Atoi(location)
@@ -139,11 +139,10 @@ func NewOwm(config config) (interface{}, error) {
 
 	_url.RawQuery = urlQuery.Encode()
 
-	return &Owm{
-		url: _url.String(),
-	}, nil
+	o.url = _url.String()
+	return nil
 }
 
 func init() {
-	registry.AddReceiver("Owm", NewOwm, owmResponse{})
+	registry.AddReceiver("Owm", &Owm{}, owmResponse{})
 }

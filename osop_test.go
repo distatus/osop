@@ -25,6 +25,8 @@ import (
 	"bytes"
 	"fmt"
 	"log"
+	"path/filepath"
+	"reflect"
 	"testing"
 	"time"
 
@@ -43,28 +45,35 @@ var RegistryTests = []struct {
 	{"TEST", "test", "z3"},
 }
 
+type testInput struct {
+	Field string
+}
+
+func (t *testInput) Init(config config) error { return nil }
+
+func (t *testInput) Get() (interface{}, error) { return t.Field, nil }
+
 func TestRegistry(t *testing.T) {
 	for _, tt := range RegistryTests {
-		inputFun := func(c config) (interface{}, error) { return tt.input, nil }
+		input := &testInput{Field: tt.input}
 
 		registry := Registry{
-			receivers: make(map[string]interface{}),
+			receivers: make(map[string]reflect.Type),
 			zeros:     make(map[string]interface{}),
 		}
-		registry.AddReceiver(tt.input, inputFun, tt.zero)
+		registry.AddReceiver(tt.input, input, tt.zero)
 
 		assert.Equal(t, 1, len(registry.receivers))
 		assert.Equal(t, 1, len(registry.zeros))
-		result, rerr := registry.receivers[tt.expected].(receiverCtor)(map[string]interface{}{})
-		assert.Equal(t, tt.input, result)
-		assert.Nil(t, rerr)
+		result := registry.receivers[tt.expected]
+		assert.Equal(t, reflect.TypeOf(input).Elem(), result)
 		assert.Equal(t, tt.zero, registry.zeros[tt.expected])
 
 		for _, ttt := range RegistryTests {
 			receiver, err := registry.GetReceiver(ttt.expected)
 			assert.Nil(t, err)
-			result, rerr := receiver(map[string]interface{}{})
-			assert.Equal(t, tt.input, result)
+			result, rerr := receiver.Get()
+			assert.Equal(t, "", result)
 			assert.Nil(t, rerr)
 			zero, err := registry.GetZero(ttt.expected)
 			assert.Equal(t, tt.zero, zero)
@@ -87,6 +96,14 @@ type testReceiver interface {
 type testReceiverPolling struct {
 	Good  bool
 	Count uint
+}
+
+func (r *testReceiverPolling) Init(config config) error {
+	if !r.Good {
+		r.Good = true
+		return fmt.Errorf("InitError")
+	}
+	return nil
 }
 
 func (r *testReceiverPolling) Get() (interface{}, error) {
@@ -126,7 +143,7 @@ func TestWorker(t *testing.T) {
 		receiver := tt.receiver
 		worker := Worker{
 			pollInterval: time.Millisecond,
-			receiver:     receiver,
+			receiver:     receiver.(PollingReceiver),
 			name:         "testGood",
 			once:         true,
 		}
@@ -156,16 +173,10 @@ type testRegistry struct {
 	Good bool
 }
 
-func (t *testRegistry) AddReceiver(name string, receiver receiverCtor, zero interface{}) {}
+func (t *testRegistry) AddReceiver(name string, receiver PollingReceiver, zero interface{}) {}
 
-func (t *testRegistry) GetReceiver(name string) (receiverCtor, error) {
-	return func(config config) (interface{}, error) {
-		if !t.Good {
-			t.Good = true
-			return nil, fmt.Errorf("CtorError")
-		}
-		return true, nil
-	}, nil
+func (t *testRegistry) GetReceiver(name string) (PollingReceiver, error) {
+	return &testReceiverPolling{Good: t.Good}, nil
 }
 
 func (t *testRegistry) GetZero(name string) (interface{}, error) {
@@ -179,7 +190,7 @@ var NewWorkerTests = []struct {
 }{
 	{true, map[string]interface{}{"receiver": "test"}, func(t *testing.T, worker *Worker) {
 		assert.Equal(t, time.Second, worker.pollInterval)
-		assert.Equal(t, true, worker.receiver)
+		assert.Equal(t, &testReceiverPolling{Good: true}, worker.receiver)
 		assert.Equal(t, "test", worker.name)
 
 		_, err := logR.ReadString('\n')
@@ -188,12 +199,12 @@ var NewWorkerTests = []struct {
 	}},
 	{false, map[string]interface{}{"receiver": "test"}, func(t *testing.T, worker *Worker) {
 		assert.Equal(t, time.Second, worker.pollInterval)
-		assert.Equal(t, true, worker.receiver)
+		assert.Equal(t, &testReceiverPolling{Good: true}, worker.receiver)
 		assert.Equal(t, "test", worker.name)
 
 		stderr, err := logR.ReadString('\n')
 		assert.Nil(t, err)
-		assert.Equal(t, "CtorError\n", stderr[20:len(stderr)])
+		assert.Equal(t, "InitError\n", stderr[20:len(stderr)])
 	}},
 	{true, map[string]interface{}{"receiver": "test", "pollInterval": "1m"}, func(t *testing.T, worker *Worker) {
 		assert.Equal(t, time.Minute, worker.pollInterval)
@@ -202,10 +213,28 @@ var NewWorkerTests = []struct {
 
 func TestNewWorker(t *testing.T) {
 	for _, tt := range NewWorkerTests {
+		correctRegistry := registry
+
 		registry = &testRegistry{Good: tt.Good}
 
 		worker := NewWorker("test", tt.Config)
 		tt.Assert(t, worker)
+
+		registry = correctRegistry
+	}
+}
+
+// Basic routine for checking that all receivers are registered.
+func TestReceivers(t *testing.T) {
+	files, _ := filepath.Glob("./*.go")
+	for _, file := range files {
+		if file == "osop.go" || (len(file) > 7 && file[len(file)-7:len(file)] == "test.go") {
+			continue
+		}
+
+		receiver, err := registry.GetReceiver(file[0 : len(file)-3])
+		assert.Nil(t, err)
+		assert.NotNil(t, receiver)
 	}
 }
 

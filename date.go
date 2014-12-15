@@ -33,10 +33,11 @@ func (d *Date) Get() (interface{}, error) {
 	return time.Now().Format(d.format), nil
 }
 
-func NewDate(config config) (interface{}, error) {
-	return &Date{format: config["format"].(string)}, nil
+func (d *Date) Init(config config) error {
+	d.format = config["format"].(string)
+	return nil
 }
 
 func init() {
-	registry.AddReceiver("Date", NewDate, "")
+	registry.AddReceiver("Date", &Date{}, "")
 }
