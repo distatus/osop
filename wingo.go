@@ -71,6 +71,7 @@ type workspace struct {
 type Wingo struct {
 	Workspaces []*workspace
 	ActiveName string
+	activeId   int
 
 	workspaces  map[string]*workspace
 	clients     map[int]*workspace // FIXME: This name is ambiguous
@@ -93,9 +94,13 @@ func (w *Wingo) GetEvented() (interface{}, error) {
 		w.Workspaces = append(w.Workspaces, w.getWorkspace(event.Name))
 	case "RemovedWorkspace":
 		w.Workspaces = del(w.Workspaces, event.Name)
-	case "ChangedActiveClient", "ChangedClientName":
-		// FIXME: Active name should be per head, shouldn't it?
+	case "ChangedClientName":
+		if event.Id == w.activeId {
+			w.ActiveName = w.getClientName(event.Id)
+		}
+	case "ChangedActiveClient":
 		w.ActiveName = w.getClientName(event.Id)
+		w.activeId = event.Id
 	case "MappedClient", "ManagedClient":
 		w.addClient(event.Id, nil)
 	case "UnmappedClient":
@@ -114,19 +119,25 @@ func (w *Wingo) Get() (interface{}, error) {
 	return *w, nil
 }
 
-func (w *Wingo) getWorkspace(name string) *workspace {
-	workspace := &workspace{Name: name}
+func (w *Wingo) getWorkspaceHead(name string) (int64, error) {
 	w.connection.Write([]byte(fmt.Sprintf("WorkspaceHead \"%s\"\x00", name)))
 	head, err := w.reader.ReadString(0)
 	if err != nil {
 		log.Printf("Error getting Wingo workspace head: `%s`, `%s`", name, err)
+		return 0, err
+	}
+	return strconv.ParseInt(head[:len(head)-1], 0, 0)
+}
+
+func (w *Wingo) getWorkspace(name string) *workspace {
+	var err error
+	workspace := &workspace{Name: name}
+
+	workspace.ActiveOn, err = w.getWorkspaceHead(name)
+	if err != nil {
+		log.Printf("Error getting Wingo workspace head: `%s`, `%s`", name, err)
 	} else {
-		workspace.ActiveOn, err = strconv.ParseInt(head[:len(head)-1], 0, 0)
-		if err != nil {
-			log.Printf("Error getting Wingo workspace head: `%s`, `%s`", name, err)
-		} else {
-			workspace.Active = workspace.ActiveOn != -1
-		}
+		workspace.Active = workspace.ActiveOn != -1
 	}
 
 	// TODO: This doesn't seem usable in current form
@@ -169,12 +180,20 @@ func (w *Wingo) getClientName(id int) string {
 	return activeName[:len(activeName)-1]
 }
 
+func (w *Wingo) getClientWorkspaceName(id int) (string, error) {
+	w.connection.Write([]byte(fmt.Sprintf("GetClientWorkspace %d\x00", id)))
+	workspaceName, err := w.reader.ReadString(0)
+	if err != nil {
+		log.Printf("Error getting Wingo client workspace: `%d`, `%s`", id, err)
+		return "", err
+	}
+	return workspaceName, nil
+}
+
 func (w *Wingo) addClient(id int, workspace *workspace) {
 	if workspace == nil {
-		w.connection.Write([]byte(fmt.Sprintf("GetClientWorkspace %d\x00", id)))
-		workspaceName, err := w.reader.ReadString(0)
+		workspaceName, err := w.getClientWorkspaceName(id)
 		if err != nil {
-			log.Printf("Error getting Wingo client workspace: `%d`, `%s`", id, err)
 			return
 		}
 		workspace = w.workspaces[workspaceName[:len(workspaceName)-1]]
