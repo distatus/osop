@@ -31,7 +31,6 @@ import (
 type Mpd struct {
 	address  string
 	password string
-	watcher  *mpd.Watcher
 }
 
 type mpdResponse struct {
@@ -39,16 +38,8 @@ type mpdResponse struct {
 	Status map[string]string
 }
 
-func (m *Mpd) GetEvented() (interface{}, error) {
-	<-m.watcher.Event
-
-	return m.Get()
-}
-
 func (m *Mpd) Get() (interface{}, error) {
-	// FIXME: This should go to constructor,
-	// but there's a bug in gompd that connections created before
-	// <-watcher fail with EOF afterwards.
+	// FIXME: This should go to constructor.
 	client, err := mpd.DialAuthenticated("tcp", m.address, m.password)
 	if err != nil {
 		return nil, fmt.Errorf("Connection error: `%s`", err)
@@ -82,14 +73,8 @@ func (m *Mpd) Init(config config) error {
 	address := config["address"].(string)
 	password := config["password"].(string)
 
-	watcher, err := mpd.NewWatcher("tcp", address, password, "player")
-	if err != nil {
-		return fmt.Errorf("Cannot connect to MPD: `%s`", err)
-	}
-
 	m.address = address
 	m.password = password
-	m.watcher = watcher
 	return nil
 }
 
