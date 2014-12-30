@@ -70,11 +70,14 @@ func (m *Mpd) getStatus(client *mpd.Client) map[string]string {
 }
 
 func (m *Mpd) Init(config config) error {
-	address := config["address"].(string)
-	password := config["password"].(string)
+	if config["address"] == nil {
+		return fmt.Errorf("Address parameter is required for Mpd receiver")
+	}
 
-	m.address = address
-	m.password = password
+	m.address = config["address"].(string)
+	if config["password"] != nil {
+		m.password = config["password"].(string)
+	}
 	return nil
 }
 

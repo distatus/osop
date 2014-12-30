@@ -165,7 +165,7 @@ func (t *Transmission) Get() (interface{}, error) {
 
 func (t *Transmission) Init(config config) error {
 	if config["address"] == nil {
-		return fmt.Errorf("Address parameter is required for Owm receiver")
+		return fmt.Errorf("Address parameter is required for Transmission receiver")
 	}
 	_url, err := url.Parse(config["address"].(string))
 	if err != nil {
