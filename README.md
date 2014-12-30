@@ -1,16 +1,16 @@
 [![Build Status](https://travis-ci.org/KenjiTakahashi/osop.png?branch=master)](https://travis-ci.org/KenjiTakahashi/osop)
 
-**osop**
+**osop** - other side of *the* pipe - outputs formatted metrics to your Stdout.
 
 ## screenshots
 
 Plain output to terminal:
 
-**SHOT1**
+![screenshot1](https://copy.com/IjgI8uHhhxGK6HzE)
 
 Paired with [gobar](https://github.com/KenjiTakahashi/gobar):
 
-**SHOT2**
+![screenshot2](https://copy.com/qJKvFzqROUoBqCri)
 
 ## installation
 
@@ -28,71 +28,183 @@ should get you GOing.
 
 The only command line switch is `-c` which specifies a configuration file location. Location can either be absolute or relative to `$XDG_CONFIG_DIR/osop`. Defaults to `$XDG_CONFIG_DIR/osop/config.toml`.
 
-Configuration file uses [toml](https://github.com/toml-lang/toml) language and looks like this.
+Configuration file uses [toml](https://github.com/toml-lang/toml) language and consists of two sections.
+
+The mandatory **Osop** section.
 
 ```toml
-[<Local name assigned to receiver>]
-receiver = "<receiver name>" # Required.
-pollInterval = "1s" # Optional for Evented Receivers.
-<receiver specific settings>
-
-[Osop] # Required
-template = "" # A text/template style template.
+[Osop]
+delims = ["<", ">"]
+template = ""
 ```
 
-Each receiver outputs some information whose are then available for use inside the template, under the &lt;Local name assigned to receiver&gt;.
+Where the required **template** is a text/template string and optional **delims** specify action delimiters (defaults to `<` and `>`)
+
+In addition to standard actions, a `stringify` action is defined to take one argument and *always* return (possibly empty) string no matter what. This proved to be useful in some cases.
+
+Zero or more **Receiver** sections.
+
+```toml
+[Name]
+receiver = "date"
+pollInterval = "1s"
+otherSetting1 = "setsth"
+otherSetting2 = "setsthelse"
+```
+
+**Receiver** represents a single data unit, such as date, system information, weather, etc. Each is configured with `[Name]` which will be used inside **Osop** template string and `receiver`, which tells what receiver to run.
+
+Different receivers might use different strategies to get the data. Some are evented (passively waiting for data to arrive), others are actively polling for data on time interval. Time interval is configured with `pollInterval`, which is required for polling receivers and ignored by evented ones.
+
+Other settings might be exposed as needed by specific receivers.
 
 For available receivers, their settings and output format(s), see [receivers](#receivers) section.
 
-For a more real world examples, see [my dotfiles](https://github.com/KenjiTakahashi/dotfiles/dotconfig/osop)
+For a more real world examples, see [my dotfiles](https://github.com/KenjiTakahashi/dotfiles/dotconfig/osop).
 
 ### receivers
 
-**date** - current date and time.
+#### date
 
-##### Configuration
+Current date and/or time.
 
-```toml
-format = "02/01/2006 | 15:04:05" # Required, output format the Golang way.
-```
+**Configuration:**
 
-##### Output
+* format *(required)* - [Golang style](http://golang.org/pkg/time/#Time.Format) date format string.
 
-String with current date, formatted as configured.
+**Output:** String.
 
-**sys** - different system metrics.
+#### sys
 
-```toml
-metrics = [] # Required, list of metrics to gather.
-shorts = false # Optional (defaults to false), use full (KB) or short (K) units.
-```
+System metrics.
 
-##### Configuration
+**Configuration:**
 
-Available metrics are:
+* metrics *(required)* - List of any number of values from:
+    * cpu percent *[true|false]* - Current CPU usage in percents, *[per core|cumulative]*.
+    * uptime
+    * memory
+    * swap
+    * network *&lt;interface>* - Network statistics for given interface (e.g. *wlan0*).
+* shorts *(optional)* - Use short (*K*) units, instead of full (*KB*). *Defaults to false.*
 
-* `CPU percent [false|true]` - optional argument indicates whether to gather per cpu.
-* `Network <eth0>` - required argument specifies which interface to monitor.
-* `Memory`
-* `Swap`
-* `Uptime`
+**Output:** Struct:
 
-##### Output
+* CPU
+    * Percent - Dictionary of *cpu0*, *cpu1*, etc. For cumulative, only *cpu0* is filled.
+* Uptime
+* Memory
+    * Total
+    * UsedF
+    * UsedA
+* Swap
+    * Total
+    * Used
+* Network - Dictionary of network interface names to Struct:
+    * Sent
+    * Recv
+    * Download
+    * Upload
 
-Structure with a field for each specified metric (order like above):
+*Note that only parts relevant to values set in `metrics` will actually be filled.*
 
-* map of `cpu<num>` [for `true`, `cpu0` gathers all info].
-* map of `<interface>:{Download,Upload,Sent,Recv}`.
-* struct with fields `Total,UsedF,UserA`.
-* struct with fields `Total,Used`.
-* a single number.
+#### owm
 
-**owm** - weather information based on OpenWeatherMap service.
+Weather information based on OpenWeatherMap service.
 
-**transmission** - transmission daemon information.
+**Configuration:**
 
-**mpd** - mpd daemon information.
+* location *(required)* - Either "City,Country Code" *(e.g. "London,UK")* or a location code.
+* apiKey *(optional)* - OpenWeatherMap API key.
+* units *(optional)* - Either "metric" or "imperial". *Defaults to "metric".*
 
-**bspwm** - [bspwm](https://github.com/baskerville/bspwm) status pieces.
+**Output:** Struct:
 
-**wingo** - [wingo](https://github.com/BurntSushi/wingo) status pieces.
+* City
+* Country
+* Sunrise
+* Sunset
+* Temp
+* TempMin
+* TempMax
+* Pressure
+* Humidity
+* Wind
+    * Speed
+    * Deg
+* Coord
+    * Lon
+    * Lat
+
+#### transmission
+
+Transmission daemon information.
+
+**Configuration:**
+
+* address *(required)* - URL to transmission RPC server.
+* path *(optional)* - Path to transmission RPC server. *Defaults to "transmission/rpc".*
+* shorts *(optional)* - Use short (*K/s*) units, instead of full (*KB/s*). *Defaults to false.*
+
+**Output:** Struct:
+
+* TorrentCount
+* ActiveTorrentCount
+* PausedTorrentCount
+* DownloadSpeed
+* UploadSpeed
+* Cumulative
+    * Downloaded
+    * Uploaded
+    * FilesAdded
+    * SessionCount
+    * SecondsActive
+* Current
+    * Downloaded
+    * Uploaded
+    * FilesAdded
+    * SessionCount
+    * SecondsActive
+
+#### mpd
+
+Mpd information.
+
+**Configuration:**
+
+* address *(required)* - URL to MPD server.
+* password *(optional)* - Password to MPD server.
+
+**Output:** Struct:
+
+* Song - Dictionary with current song's metadata.
+* Status - Dictionary with status, as described [here](http://www.musicpd.org/doc/protocol/command_reference.html).
+
+#### bspwm
+
+[Bspwm](https://github.com/baskerville/bspwm) status pieces.
+
+**Output:** Struct:
+
+* Monitors - List of Struct:
+    * Name
+    * State
+    * Index
+    * Desktops - List of Struct:
+        * Name
+        * State
+
+#### wingo
+
+[Wingo](https://github.com/BurntSushi/wingo) status pieces.
+
+**Output:** Struct:
+
+* Workspaces - List of Struct:
+    * Name
+    * Active
+    * ActiveOn
+    * Alerted
+    * Layout
+    * Clients - number of clients.
+    * HasClients
