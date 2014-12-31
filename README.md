@@ -60,7 +60,7 @@ Other settings might be exposed as needed by specific receivers.
 
 For available receivers, their settings and output format(s), see [receivers](#receivers) section.
 
-For a more real world examples, see [my dotfiles](https://github.com/KenjiTakahashi/dotfiles/dotconfig/osop).
+For a more real world examples, see [my dotfiles](https://github.com/KenjiTakahashi/dotfiles/tree/master/dotconfig/osop).
 
 ### receivers
 
