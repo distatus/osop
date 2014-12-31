@@ -52,7 +52,7 @@ otherSetting1 = "setsth"
 otherSetting2 = "setsthelse"
 ```
 
-**Receiver** represents a single data unit, such as date, system information, weather, etc. Each is configured with `[Name]` which will be used inside **Osop** template string and `receiver`, which tells what receiver to run.
+**Receiver** represents a single data unit, such as date, system information, weather, etc. Each is configured with `[Name]` which will be used inside **Osop** template string and `receiver`, which tells what receiver to run. *Receivers are case insensitive.*
 
 Different receivers might use different strategies to get the data. Some are evented (passively waiting for data to arrive), others are actively polling for data on time interval. Time interval is configured with `pollInterval`, which is required for polling receivers and ignored by evented ones.
 
