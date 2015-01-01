@@ -28,7 +28,10 @@ import (
 	"time"
 
 	"github.com/pyk/byten"
-	"github.com/shirou/gopsutil"
+	"github.com/shirou/gopsutil/cpu"
+	"github.com/shirou/gopsutil/host"
+	"github.com/shirou/gopsutil/mem"
+	"github.com/shirou/gopsutil/net"
 )
 
 func bytonizeUint(i uint64, speed, short bool) string {
@@ -92,9 +95,9 @@ func (s *Sys) Get() (interface{}, error) {
 			case "percent":
 				var cpupercents []float32
 				if len(split) < 3 || split[2] == "false" {
-					cpupercents, err = gopsutil.CPUPercent(0, false)
+					cpupercents, err = cpu.CPUPercent(0, false)
 				} else if split[2] == "true" {
-					cpupercents, err = gopsutil.CPUPercent(0, true)
+					cpupercents, err = cpu.CPUPercent(0, true)
 				} else {
 					err = fmt.Errorf("Sys: `cpu percent` got wrong argument")
 					break
@@ -105,20 +108,20 @@ func (s *Sys) Get() (interface{}, error) {
 				}
 			}
 		case "uptime":
-			resp.Uptime, err = gopsutil.BootTime()
+			resp.Uptime, err = host.BootTime()
 		case "memory":
-			var mem *gopsutil.VirtualMemoryStat
-			mem, err = gopsutil.VirtualMemory()
-			resp.Memory.Total = bytonizeUint(mem.Total, false, s.shorts)
-			resp.Memory.UsedF = bytonizeUint(mem.Used, false, s.shorts)
-			resp.Memory.UsedA = bytonizeUint(mem.Total-mem.Available, false, s.shorts)
+			var m *mem.VirtualMemoryStat
+			m, err = mem.VirtualMemory()
+			resp.Memory.Total = bytonizeUint(m.Total, false, s.shorts)
+			resp.Memory.UsedF = bytonizeUint(m.Used, false, s.shorts)
+			resp.Memory.UsedA = bytonizeUint(m.Total-m.Available, false, s.shorts)
 		case "swap":
-			var mem *gopsutil.SwapMemoryStat
-			mem, err = gopsutil.SwapMemory()
-			resp.Swap.Total = bytonizeUint(mem.Total, false, s.shorts)
-			resp.Swap.Used = bytonizeUint(mem.Used, false, s.shorts)
+			var m *mem.SwapMemoryStat
+			m, err = mem.SwapMemory()
+			resp.Swap.Total = bytonizeUint(m.Total, false, s.shorts)
+			resp.Swap.Used = bytonizeUint(m.Used, false, s.shorts)
 		case "network":
-			var nic []gopsutil.NetIOCountersStat
+			var nic []net.NetIOCountersStat
 			if len(split) < 2 || strings.ToLower(split[1]) == "all" {
 				// FIXME: Returns eth0 only, seems gopsutil bug
 				//nic, err = gopsutil.NetIOCounters(false)
@@ -127,7 +130,7 @@ func (s *Sys) Get() (interface{}, error) {
 				//}
 				//resp.Network = map[string]gopsutil.NetIOCountersStat{"All": nic[0]}
 			} else {
-				nic, err = gopsutil.NetIOCounters(true)
+				nic, err = net.NetIOCounters(true)
 				if err != nil || len(nic) == 0 {
 					break
 				}
@@ -146,7 +149,7 @@ func (s *Sys) Get() (interface{}, error) {
 }
 
 func (s *Sys) getNetworkByName(
-	nices []gopsutil.NetIOCountersStat,
+	nices []net.NetIOCountersStat,
 	name string,
 ) sysResponseNetwork {
 	net := sysResponseNetwork{}
