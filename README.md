@@ -74,6 +74,20 @@ Current date and/or time.
 
 **Output:** String.
 
+#### battery
+
+Current battery state.
+
+**Configuration:**
+
+* number *(optional)* - Battery number/index. *Defaults to 0*.
+
+**Output:** Struct:
+
+* Charge - Current charge number as returned by the system.
+* Percent - Current charge in percentage form.
+* State - Possible values: "Empty", "Full", "Charging", "Discharging", "Unknown".
+
 #### sys
 
 System metrics.
