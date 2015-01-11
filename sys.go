@@ -1,5 +1,5 @@
 // osop
-// Copyright (C) 2014 Karol 'Kenji Takahashi' Woźniak
+// Copyright (C) 2014-2015 Karol 'Kenji Takahashi' Woźniak
 //
 // Permission is hereby granted, free of charge, to any person obtaining
 // a copy of this software and associated documentation files (the "Software"),
@@ -66,7 +66,7 @@ type sysResponseNetwork struct {
 
 type sysResponse struct {
 	CPU struct {
-		Percent map[string]string
+		Percent map[string]float32
 	}
 	Uptime uint64
 	Memory struct {
@@ -102,9 +102,9 @@ func (s *Sys) Get() (interface{}, error) {
 					err = fmt.Errorf("Sys: `cpu percent` got wrong argument")
 					break
 				}
-				resp.CPU.Percent = make(map[string]string)
+				resp.CPU.Percent = make(map[string]float32)
 				for i, cpupercent := range cpupercents {
-					resp.CPU.Percent[fmt.Sprintf("cpu%d", i)] = fmt.Sprintf("%.2f%%", cpupercent)
+					resp.CPU.Percent[fmt.Sprintf("cpu%d", i)] = cpupercent
 				}
 			}
 		case "uptime":
