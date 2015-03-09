@@ -66,7 +66,7 @@ type sysResponseNetwork struct {
 
 type sysResponse struct {
 	CPU struct {
-		Percent map[string]float32
+		Percent map[string]float64
 	}
 	Uptime uint64
 	Memory struct {
@@ -93,7 +93,7 @@ func (s *Sys) Get() (interface{}, error) {
 			}
 			switch split[1] {
 			case "percent":
-				var cpupercents []float32
+				var cpupercents []float64
 				if len(split) < 3 || split[2] == "false" {
 					cpupercents, err = cpu.CPUPercent(0, false)
 				} else if split[2] == "true" {
@@ -102,7 +102,7 @@ func (s *Sys) Get() (interface{}, error) {
 					err = fmt.Errorf("Sys: `cpu percent` got wrong argument")
 					break
 				}
-				resp.CPU.Percent = make(map[string]float32)
+				resp.CPU.Percent = make(map[string]float64)
 				for i, cpupercent := range cpupercents {
 					resp.CPU.Percent[fmt.Sprintf("cpu%d", i)] = cpupercent
 				}
