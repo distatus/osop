@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"net"
+	"os"
 	"path/filepath"
 	"strings"
 )
@@ -62,11 +63,16 @@ func (b *Bspwm) Get() (interface{}, error) {
 }
 
 func (b *Bspwm) Init(config config) error {
-	socket, err := filepath.Glob("/tmp/bspwm*")
-	if err != nil || len(socket) < 1 {
-		return fmt.Errorf("Cannot find socket file")
+	socket := os.Getenv("BSPWM_SOCKET")
+	if socket == "" {
+		sockets, err := filepath.Glob("/tmp/bspwm*")
+		if err != nil || len(socket) < 1 {
+			return fmt.Errorf("Cannot find socket file")
+		}
+		socket = sockets[0]
 	}
-	conn, err := net.Dial("unix", socket[0])
+
+	conn, err := net.Dial("unix", socket)
 	if err != nil {
 		return fmt.Errorf("Cannot connect to socket: `%s`", err)
 	}
