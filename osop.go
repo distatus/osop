@@ -1,5 +1,5 @@
 // osop
-// Copyright (C) 2014 Karol 'Kenji Takahashi' Woźniak
+// Copyright (C) 2014,2016 Karol 'Kenji Takahashi' Woźniak
 //
 // Permission is hereby granted, free of charge, to any person obtaining
 // a copy of this software and associated documentation files (the "Software"),
@@ -197,7 +197,7 @@ func NewWorker(name string, config config) *Worker {
 
 	err := receiver.Init(config)
 	for err != nil {
-		log.Println(err)
+		log.Printf("%s: Init error: %s\n", name, err)
 		time.Sleep(time.Second)
 		err = receiver.Init(config)
 	}
