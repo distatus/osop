@@ -109,6 +109,10 @@ func (o *Owm) Init(config config) error {
 	if config["location"] == nil {
 		return fmt.Errorf("Location parameter is required for Owm receiver")
 	}
+	if config["apiKey"] == nil {
+		return fmt.Errorf("`apiKey` parameter is required")
+	}
+
 	_url, err := url.Parse(URL)
 	if err != nil {
 		return fmt.Errorf("Cannot parse Owm URL: `%s`", err)
@@ -121,10 +125,7 @@ func (o *Owm) Init(config config) error {
 	} else {
 		urlQuery.Add("id", location)
 	}
-
-	if config["apiKey"] != nil {
-		urlQuery.Add("APPID", config["apiKey"].(string))
-	}
+	urlQuery.Add("APPID", config["apiKey"].(string))
 
 	units := "metric"
 	if config["units"] != nil {

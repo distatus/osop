@@ -129,7 +129,7 @@ Weather information based on OpenWeatherMap service.
 **Configuration:**
 
 * location *(required)* - Either "City,Country Code" *(e.g. "London,UK")* or a location code.
-* apiKey *(optional)* - OpenWeatherMap API key.
+* apiKey *(required)* - OpenWeatherMap API key.
 * units *(optional)* - Either "metric" or "imperial". *Defaults to "metric".*
 
 **Output:** Struct:
