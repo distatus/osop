@@ -1,5 +1,5 @@
 // osop
-// Copyright (C) 2014 Karol 'Kenji Takahashi' Woźniak
+// Copyright (C) 2014,2016 Karol 'Kenji Takahashi' Woźniak
 //
 // Permission is hereby granted, free of charge, to any person obtaining
 // a copy of this software and associated documentation files (the "Software"),
@@ -107,7 +107,7 @@ func (o *Owm) Get() (interface{}, error) {
 
 func (o *Owm) Init(config config) error {
 	if config["location"] == nil {
-		return fmt.Errorf("Location parameter is required for Owm receiver")
+		return fmt.Errorf("`location` parameter is required")
 	}
 	if config["apiKey"] == nil {
 		return fmt.Errorf("`apiKey` parameter is required")
@@ -115,7 +115,7 @@ func (o *Owm) Init(config config) error {
 
 	_url, err := url.Parse(URL)
 	if err != nil {
-		return fmt.Errorf("Cannot parse Owm URL: `%s`", err)
+		return fmt.Errorf("Cannot parse URL: `%s`", err)
 	}
 	location := config["location"].(string)
 	_, err = strconv.Atoi(location)
@@ -131,7 +131,7 @@ func (o *Owm) Init(config config) error {
 	if config["units"] != nil {
 		_units := config["units"].(string)
 		if _units != "metric" && _units != "imperial" {
-			log.Printf("Unknown units (%s), using `metric`\n", _units)
+			log.Printf("Unknown units `%s`, using `metric`\n", _units)
 		} else {
 			units = _units
 		}
