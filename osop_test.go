@@ -204,7 +204,7 @@ var NewWorkerTests = []struct {
 
 		stderr, err := logR.ReadString('\n')
 		assert.Nil(t, err)
-		assert.Equal(t, "InitError\n", stderr[20:len(stderr)])
+		assert.Equal(t, "test: Init error: InitError\n", stderr[20:len(stderr)])
 	}},
 	{true, map[string]interface{}{"receiver": "test", "pollInterval": "1m"}, func(t *testing.T, worker *Worker) {
 		assert.Equal(t, time.Minute, worker.pollInterval)
