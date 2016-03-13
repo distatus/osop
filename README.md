@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/KenjiTakahashi/osop.png?branch=master)](https://travis-ci.org/KenjiTakahashi/osop)
+[![Build Status](https://travis-ci.org/distatus/osop.png?branch=master)](https://travis-ci.org/distatus/osop)
 
 **osop** - other side of *the* pipe - outputs formatted metrics to your Stdout.
 
@@ -8,7 +8,7 @@ Plain output to terminal:
 
 ![screenshot1](https://copy.com/IjgI8uHhhxGK6HzE)
 
-Paired with [gobar](https://github.com/KenjiTakahashi/gobar):
+Paired with [gobar](https://github.com/distatus/gobar):
 
 ![screenshot2](https://copy.com/qJKvFzqROUoBqCri)
 
@@ -19,7 +19,7 @@ First, you have to [get Go](http://golang.org/doc/install). Note that version >=
 Then, just
 
 ```bash
-$ go get github.com/KenjiTakahashi/osop
+$ go get github.com/distatus/osop
 ```
 
 should get you GOing.
