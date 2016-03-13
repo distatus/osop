@@ -1,5 +1,5 @@
 // osop
-// Copyright (C) 2015 Karol 'Kenji Takahashi' Woźniak
+// Copyright (C) 2015-2016 Karol 'Kenji Takahashi' Woźniak
 //
 // Permission is hereby granted, free of charge, to any person obtaining
 // a copy of this software and associated documentation files (the "Software"),
@@ -21,7 +21,7 @@
 
 package main
 
-import "hkjn.me/power"
+import "github.com/distatus/battery"
 
 type batteryResponse struct {
 	Charge  float32
@@ -34,18 +34,19 @@ type Battery struct {
 }
 
 func (b *Battery) Get() (interface{}, error) {
-	res, err := power.GetNumber(b.number)
+	res, err := battery.Get(b.number)
 	if err != nil {
 		return nil, err
 	}
 
-	percent := float32(res.Charge * 100)
+	charge := res.Current / res.Full
+	percent := float32(charge * 100)
 	// If battery controller does not work as expected.
 	if percent > 100 {
 		percent = 100
 	}
 	return batteryResponse{
-		Charge:  float32(res.Charge),
+		Charge:  float32(charge),
 		Percent: percent,
 		State:   res.State.String(),
 	}, nil
