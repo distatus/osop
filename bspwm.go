@@ -58,7 +58,7 @@ func (b *Bspwm) GetEvented() (interface{}, error) {
 func (b *Bspwm) Get() (interface{}, error) {
 	status, err := b.reader.ReadString('\n')
 	if err != nil {
-		panic(err)
+		return nil, fmt.Errorf("Cannot read from socket: `%s`", err)
 	}
 
 	res := bspwmResponse{}
@@ -87,7 +87,7 @@ func (b *Bspwm) Init(config config) error {
 	socket := os.Getenv("BSPWM_SOCKET")
 	if socket == "" {
 		sockets, err := filepath.Glob("/tmp/bspwm*")
-		if err != nil || len(socket) < 1 {
+		if err != nil || len(sockets) < 1 {
 			return fmt.Errorf("Cannot find socket file")
 		}
 		socket = sockets[0]
@@ -98,7 +98,10 @@ func (b *Bspwm) Init(config config) error {
 		return fmt.Errorf("Cannot connect to socket: `%s`", err)
 	}
 
-	conn.Write([]byte("control\x00--subscribe\x00"))
+	if _, err = conn.Write([]byte("subscribe\x00report\x00")); err != nil {
+		conn.Close()
+		return fmt.Errorf("Cannot write to socket: `%s`", err)
+	}
 
 	b.connection = conn
 	b.reader = bufio.NewReader(conn)
