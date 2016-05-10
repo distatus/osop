@@ -6,11 +6,11 @@
 
 Plain output to terminal:
 
-![screenshot1](https://copy.com/IjgI8uHhhxGK6HzE)
+![screenshot1](http://img.kenji.sx/osop1.gif)
 
 Paired with [gobar](https://github.com/distatus/gobar):
 
-![screenshot2](https://copy.com/qJKvFzqROUoBqCri)
+![screenshot2](http://img.kenji.sx/osop2.gif)
 
 ## installation
 
