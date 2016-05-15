@@ -14,7 +14,7 @@ Paired with [gobar](https://github.com/distatus/gobar):
 
 ## installation
 
-First, you have to [get Go](http://golang.org/doc/install). Note that version >= 1.2 is required.
+First, you have to [get Go](http://golang.org/doc/install). Note that version >= 1.5 is required.
 
 Then, just
 
