@@ -1,5 +1,5 @@
 // osop
-// Copyright (C) 2014-2015 Karol 'Kenji Takahashi' Woźniak
+// Copyright (C) 2014-2016 Karol 'Kenji Takahashi' Woźniak
 //
 // Permission is hereby granted, free of charge, to any person obtaining
 // a copy of this software and associated documentation files (the "Software"),
@@ -95,9 +95,9 @@ func (s *Sys) Get() (interface{}, error) {
 			case "percent":
 				var cpupercents []float64
 				if len(split) < 3 || split[2] == "false" {
-					cpupercents, err = cpu.CPUPercent(0, false)
+					cpupercents, err = cpu.Percent(0, false)
 				} else if split[2] == "true" {
-					cpupercents, err = cpu.CPUPercent(0, true)
+					cpupercents, err = cpu.Percent(0, true)
 				} else {
 					err = fmt.Errorf("Sys: `cpu percent` got wrong argument")
 					break
@@ -121,7 +121,7 @@ func (s *Sys) Get() (interface{}, error) {
 			resp.Swap.Total = bytonizeUint(m.Total, false, s.shorts)
 			resp.Swap.Used = bytonizeUint(m.Used, false, s.shorts)
 		case "network":
-			var nic []net.NetIOCountersStat
+			var nic []net.IOCountersStat
 			if len(split) < 2 || strings.ToLower(split[1]) == "all" {
 				// FIXME: Returns eth0 only, seems gopsutil bug
 				//nic, err = gopsutil.NetIOCounters(false)
@@ -130,7 +130,7 @@ func (s *Sys) Get() (interface{}, error) {
 				//}
 				//resp.Network = map[string]gopsutil.NetIOCountersStat{"All": nic[0]}
 			} else {
-				nic, err = net.NetIOCounters(true)
+				nic, err = net.IOCounters(true)
 				if err != nil || len(nic) == 0 {
 					break
 				}
@@ -148,10 +148,7 @@ func (s *Sys) Get() (interface{}, error) {
 	return resp, nil
 }
 
-func (s *Sys) getNetworkByName(
-	nices []net.NetIOCountersStat,
-	name string,
-) sysResponseNetwork {
+func (s *Sys) getNetworkByName(nices []net.IOCountersStat, name string) sysResponseNetwork {
 	net := sysResponseNetwork{}
 	for _, nic := range nices {
 		if nic.Name == name {
